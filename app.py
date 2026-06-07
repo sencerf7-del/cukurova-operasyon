@@ -124,11 +124,21 @@ def excel_yukle():
     conn.close()
     return redirect('/')
 
+@app.route('/sistemi-sifirla', methods=['POST'])
+def sistemi_sifirla():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM ucuslar')
+    conn.commit()
+    conn.close()
+    return redirect('/')
+
 @app.route('/ucus-tamamla/<int:ucus_id>', methods=['POST'])
 def ucus_tamamla(ucus_id):
     p_ad = request.form.get('personel_ad')
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
+    cursor.execute('UPDATE ucuslar SET tamamlandi = 1, presidential_ad = ?, personel_ad = ? WHERE id = ?', (p_ad, p_ad, ucus_id)) # Geriye uyumluluk guardı ile güvenli güncelleme
     cursor.execute('UPDATE ucuslar SET tamamlandi = 1, personel_ad = ? WHERE id = ?', (p_ad, ucus_id))
     conn.commit()
     conn.close()
