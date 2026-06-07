@@ -5,7 +5,7 @@
     <title>Çukurova Havalimanı Operasyon Paneli</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }
-        .header-bar { background-color: #003366; color: white; padding: 15px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; position: relative; }
+        .header-bar { background-color: #003366; color: white; padding: 15px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .container { display: flex; gap: 20px; }
         .sidebar { width: 25%; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .main-content { width: 75%; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
@@ -19,13 +19,13 @@
         
         .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; display: inline-block; }
         
-        /* 🌌 GECE ODAĞI ARKA PLAN TONU */
-        .gece-ucus { background-color: #e2eafc !important; border-left: 5px solid #1d3557; }
-        .tamamlandi-satir { opacity: 0.35; background-color: #e9ecef !important; border-left: none !important; }
+        /* 🌌 YUMUŞAK GECE MAVİSİ ODAK ARKA PLANI */
+        .gece-ucus { background-color: #e8effa !important; border-left: 5px solid #003366; }
+        .tamamlandi-satir { opacity: 0.30; background-color: #e9ecef !important; border-left: none !important; }
         
-        /* 🔵 KANKANIN İSTEDİĞİ JİLET RENK TONLARI */
-        .flight-arrival { color: #0056b3; font-weight: bold; font-size: 15px; }
-        .flight-departure { color: #cc9900; font-weight: bold; font-size: 15px; }
+        /* 🔵 KANKANIN İSTEDİĞİ SEFER NUMARASI RENKLERİ */
+        .flight-arrival { color: #0040ff; font-weight: bold; font-size: 15px; }
+        .flight-departure { color: #e6b800; font-weight: bold; font-size: 15px; text-shadow: 0.3px 0.3px #666; }
         
         .menu-container { position: relative; display: inline-block; }
         .menu-dots { font-size: 24px; cursor: pointer; background: none; border: none; color: white; padding: 0 10px; }
@@ -54,10 +54,8 @@
 
     <div class="header-bar">
         <h2>✈️ Çukurova Uluslararası Havalimanı Meydan Operasyon Paneli</h2>
-        
         <div style="display: flex; align-items: center; gap: 15px;">
             <button id="syncToggle" class="sync-btn" onclick="toggleSync()">🔄 Anlık Yenileme: KAPALI</button>
-            
             <div class="menu-container">
                 <button class="menu-dots" onclick="toggleMenu()">⋮</button>
                 <div class="dropdown-menu" id="actionsMenu">
@@ -87,8 +85,8 @@
                 <button type="submit" class="btn" style="width:100%; margin-top:5px;">Excel Yükle / Güncelle</button>
             </form>
 
-            <form action="/sistemi-sifirla" method="POST" style="margin-top: 20px;" onsubmit="return confirm('DİKKAT: Tüm uçuş listesi ve personel performansları tamamen silinecek! Emin misiniz?');">
-                <button type="submit" style="width: 100%; background-color: #dc3545; color: white; border: none; padding: 10px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">🚨 Tüm Listeyi Sıfırla</button>
+            <form action="/sistemi-sifirla" method="POST" style="margin-top: 20px;" onsubmit="return confirm('DİKKAT: Mevcut tüm uçuş programı temizlenecek! Emin misiniz?');">
+                <button type="submit" style="width: 100%; background-color: #dc3545; color: white; border: none; padding: 10px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">🚨 Listeyi Temizle</button>
             </form>
 
             <h3 style="margin-top: 35px;">📋 Aktif Personel Listesi</h3>
@@ -109,15 +107,15 @@
                 <div class="stat-card" style="border-top-color: #28a745;"><h5>Tamamlanan</h5><p style="font-size:20px; font-weight:bold; margin:0; color:#28a745;">{{ tamamlanan_ucus }}</p></div>
             </div>
 
-            <h3>📅 Kronolojik Sıralı Meydan Uçuş Programı</h3>
+            <h3>📅 Nöbet Saatlerine Göre Sıralı Uçuş Programı</h3>
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 8%;">Hareket</th>
-                        <th style="width: 12%;">Saat</th>
+                        <th style="width: 10%;">Hareket</th>
+                        <th style="width: 15%;">Saat</th>
                         <th style="width: 40%;">Uçuş (Havayolu - Sefer No)</th>
                         <th style="width: 15%;">Park Poz.</th>
-                        <th style="width: 25%;">İşlem / Atanan</th>
+                        <th style="width: 20%;">İşlem / Atanan</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -125,9 +123,9 @@
                     <tr class="{% if ucus.gece_mi == 1 %}gece-ucus{% endif %} {% if ucus.tamamlandi == 1 %}tamamlandi-satir{% endif %}">
                         <td>
                             {% if ucus.tip == 'arrival' %}
-                            <span style="font-size: 20px; color: #0056b3;" title="Geliş">🛬</span>
+                            <span style="font-size: 20px;" title="Geliş">🛬</span>
                             {% else %}
-                            <span style="font-size: 20px; color: #cc9900;" title="Gidiş">🛫</span>
+                            <span style="font-size: 20px;" title="Gidiş">🛫</span>
                             {% endif %}
                         </td>
                         
@@ -141,7 +139,7 @@
                             {% endif %}
                         </td>
                         
-                        <td><span style="background: #003366; color: white; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 14px;">{{ ucus.park }}</span></td>
+                        <td><span style="background: #003366; color: white; padding: 4px 10px; border-radius: 4px; font-weight: bold;">{{ ucus.park }}</span></td>
                         
                         <td>
                             {% if ucus.tamamlandi == 0 %}
