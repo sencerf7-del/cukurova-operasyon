@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Çukurova Havalimanı Operasyon Paneli</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }
+        .header-bar { background-color: #003366; color: white; padding: 15px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; position: relative; }
+        .container { display: flex; gap: 20px; }
+        .sidebar { width: 25%; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .main-content { width: 75%; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        
+        .pers-mavi { background-color: #007bff !important; color: white; }
+        .pers-kirmizi { background-color: #dc3545 !important; color: white; }
+        .pers-yesil { background-color: #28a745 !important; color: white; }
+        .pers-sari { background-color: #ffc107 !important; color: #333; }
+        .pers-turkuaz { background-color: #17a2b8 !important; color: white; }
+        .pers-mor { background-color: #6f42c1 !important; color: white; }
+        
+        .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; display: inline-block; }
+        .gece-ucus { background-color: #fff3cd !important; border-left: 4px solid #ffc107; }
+        .tamamlandi-satir { opacity: 0.35; background-color: #e9ecef !important; }
+        
+        .menu-container { position: relative; display: inline-block; }
+        .menu-dots { font-size: 24px; cursor: pointer; background: none; border: none; color: white; padding: 0 10px; }
+        .dropdown-menu { display: none; position: absolute; right: 0; background-color: white; min-width: 180px; box-shadow: 0px 8px 16px rgba(0,0,0,0.2); border-radius: 4px; z-index: 100; }
+        .dropdown-menu a, .dropdown-menu button { color: #333; padding: 12px 16px; text-decoration: none; display: block; border: none; background: none; width: 100%; text-align: left; font-size: 14px; cursor: pointer; }
+        .dropdown-menu a:hover, .dropdown-menu button:hover { background-color: #f1f1f1; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #003366; color: white; }
+        .btn { background: #0056b3; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        input, select { width: 100%; padding: 6px; margin: 4px 0; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
+        
+        .stats-grid { display: flex; gap: 10px; margin-bottom: 20px; }
+        .stat-card { background: #e6f0fa; border-top: 4px solid #003366; padding: 10px; border-radius: 4px; flex: 1; text-align: center; }
+        .modal { display: none; position: fixed; z-index: 200; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4); }
+        .modal-content { background-color: white; margin: 15% auto; padding: 20px; border-radius: 8px; width: 40%; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+        
+        /* Yenileme Butonu Stili */
+        .sync-btn { background-color: #ff9f43; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        .sync-active { background-color: #28a745; position: relative; }
+        .sync-active::after { content: "●"; color: #fff; margin-left: 5px; animation: blink 1s infinite; }
+        @keyframes blink { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
+    </style>
+</head>
+<body>
+
+    <div class="header-bar">
+        <h2>✈️ Çukurova Uluslararası Havalimanı Meydan Operasyon</h2>
+        
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <button id="syncToggle" class="sync-btn" onclick="toggleSync()">🔄 Anlık Yenileme: KAPALI</button>
+            
+            <div class="menu-container">
+                <button class="menu-dots" onclick="toggleMenu()">⋮</button>
+                <div class="dropdown-menu" id="actionsMenu">
+                    <button onclick="openModal()">📊 Personel İstatistikleri</button>
+                    <a href="/pdf-indir?bas_s={{bas_s}}&bas_d={{bas_d}}&bit_s={{bit_s}}&bit_d={{bit_d}}">📄 Günün Özetini İndir (PDF)</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div style="background: #e6f0fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
+        <strong style="color: #003366;">⏱️ Odak Zaman Aralığı Seçimi:</strong>
+        <form method="GET" action="/" style="display: flex; align-items: center; gap: 8px; margin: 0;">
+            <select name="bas_s" style="width: 65px;">{% for h in range(24) %}<option value="{{ h }}" {% if bas_s == h %}selected{% endif %}>{{ "%02d"|format(h) }}</option>{% endfor %}</select>:
+            <select name="bas_d" style="width: 65px;">{% for m in range(0, 60, 5) %}<option value="{{ m }}" {% if bas_d == m %}selected{% endif %}>{{ "%02d"|format(m) }}</option>{% endfor %}</select>
+            <span>-</span>
+            <select name="bit_s" style="width: 65px;">{% for h in range(24) %}<option value="{{ h }}" {% if bit_s == h %}selected{% endif %}>{{ "%02d"|format(h) }}</option>{% endfor %}</select>:
+            <select name="bit_d" style="width: 65px;">{% for m in range(0, 60, 5) %}<option value="{{ m }}" {% if bit_d == m %}selected{% endif %}>{{ "%02d"|format(m) }}</option>{% endfor %}</select>
+            <button type="submit" class="btn" style="padding: 5px 10px;">Uygula</button>
+        </form>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <h3>📊 Dosya Yükleme</h3>
+            <form action="/excel-yukle" method="POST" enctype="multipart/form-data">
+                <input type="file" name="excel_file" accept=".xlsx, .xls, .csv" required>
+                <button type="submit" class="btn" style="width:100%; margin-top:5px;">Excel Yükle / Güncelle</button>
+            </form>
+
+            <h3 style="margin-top: 35px;">📋 Aktif Personel Listesi</h3>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <div style="padding: 10px; border-radius: 4px; font-weight: bold; font-size: 15px;" class="pers-mavi">• ŞAHİN</div>
+                <div style="padding: 10px; border-radius: 4px; font-weight: bold; font-size: 15px;" class="pers-kirmizi">• SENCER</div>
+                <div style="padding: 10px; border-radius: 4px; font-weight: bold; font-size: 15px;" class="pers-yesil">• SERHAT</div>
+                <div style="padding: 10px; border-radius: 4px; font-weight: bold; font-size: 15px;" class="pers-sari">• MELİH</div>
+                <div style="padding: 10px; border-radius: 4px; font-weight: bold; font-size: 15px;" class="pers-turkuaz">• TAHA</div>
+                <div style="padding: 10px; border-radius: 4px; font-weight: bold; font-size: 15px;" class="pers-mor">• ZEYNEP</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="stats-grid">
+                <div class="stat-card"><h5>Total Uçuş</h5><p style="font-size:20px; font-weight:bold; margin:0; color:#003366;">{{ toplam_ucus }}</p></div>
+                <div class="stat-card" style="border-top-color: #ffcc00;"><h5>Odaktaki Uçuş</h5><p style="font-size:20px; font-weight:bold; margin:0; color:#cca300;">{{ gece_ucus }}</p></div>
+                <div class="stat-card" style="border-top-color: #28a745;"><h5>Tamamlanan</h5><p style="font-size:20px; font-weight:bold; margin:0; color:#28a745;">{{ tamamlanan_ucus }}</p></div>
+            </div>
+
+            <h3>📅 Güncel Uçuş ve Bağlantı Programı</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Havayolu</th>
+                        <th>Geliş No</th>
+                        <th>STA</th>
+                        <th>Gidiş No</th>
+                        <th>STD</th>
+                        <th>Park Poz.</th>
+                        <th>FR24 Radar</th>
+                        <th>İşlem / Atanan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ucus in ucuslar %}
+                    <tr class="{% if ucus.gece_mi == 1 %}gece-ucus{% endif %} {% if ucus.tamamlandi == 1 %}tamamlandi-satir{% endif %}">
+                        <td><strong>{{ ucus.havayolu }}</strong></td>
+                        <td style="color: #28a745; font-weight: bold;">{{ ucus.gelis_flight }}</td>
+                        <td>{{ ucus.sta }}</td>
+                        <td style="color: #dc3545; font-weight: bold;">{{ ucus.gidis_flight }}</td>
+                        <td>{{ ucus.std }}</td>
+                        <td><span style="background: #ffcc00; color: #003366; padding: 2px 6px; border-radius: 4px; font-weight: bold;">{{ ucus.park_pozisyonu }}</span></td>
+                        
+                        <td>
+                            {% set s_kod = ucus.havayolu.split('/')[0].strip() %}
+                            <a href="https://www.flightradar24.com/data/flights/{{ s_kod }}{{ ucus.gidis_flight if ucus.gidis_flight else ucus.gelis_flight }}" target="_blank" style="background:#003366; color:#ffcc00; padding:3px 6px; border-radius:4px; font-size:11px; font-weight:bold; text-decoration:none;">✈️ FR24</a>
+                        </td>
+                        
+                        <td>
+                            {% if ucus.tamamlandi == 0 %}
+                            <form action="/ucus-tamamla/{{ ucus.id }}" method="POST" style="display: flex; gap: 3px; margin: 0;">
+                                <select name="personel_ad" required style="width: auto; padding: 2px; font-size: 11px; margin: 0;">
+                                    <option value="">Seç...</option>
+                                    <option value="ŞAHİN">ŞAHİN</option>
+                                    <option value="SENCER">SENCER</option>
+                                    <option value="SERHAT">SERHAT</option>
+                                    <option value="MELİH">MELİH</option>
+                                    <option value="TAHA">TAHA</option>
+                                    <option value="ZEYNEP">ZEYNEP</option>
+                                </select>
+                                <button type="submit" style="background:#28a745; color:white; border:none; padding:4px 8px; border-radius:4px; font-weight:bold; cursor:pointer;">OK</button>
+                            </form>
+                            {% else %}
+                            <form action="/ucus-geri-al/{{ ucus.id }}" method="POST" style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                                <span class="badge {{ ucus.personel_renk }}">✔️ {{ ucus.personel_ad }}</span>
+                                <button type="submit" style="background:#dc3545; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Geri Al</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="statsModal" class="modal">
+        <div class="modal-content">
+            <h3 style="display:flex; justify-content:space-between;">📊 Personel Performans Raporu <span style="cursor:pointer;" onclick="closeModal()">×</span></h3>
+            <table style="width:100%; font-size:14px;">
+                <thead>
+                    <tr><th>Personel</th><th>Günlük</th><th>Haftalık</th><th>Aylık</th><th>Tümü</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>ŞAHİN</strong></td><td>{{ perf['ŞAHİN']['gunluk'] }}</td><td>{{ perf['ŞAHİN']['haftalik'] }}</td><td>{{ perf['ŞAHİN']['aylik'] }}</td><td style="font-weight:bold; color:#003366;">{{ perf['ŞAHİN']['tumu'] }}</td></tr>
+                    <tr><td><strong>SENCER</strong></td><td>{{ perf['SENCER']['gunluk'] }}</td><td>{{ perf['SENCER']['haftalik'] }}</td><td>{{ perf['SENCER']['aylik'] }}</td><td style="font-weight:bold; color:#003366;">{{ perf['SENCER']['tumu'] }}</td></tr>
+                    <tr><td><strong>SERHAT</strong></td><td>{{ perf['SERHAT']['gunluk'] }}</td><td>{{ perf['SERHAT']['haftalik'] }}</td><td>{{ perf['SERHAT']['aylik'] }}</td><td style="font-weight:bold; color:#003366;">{{ perf['SERHAT']['tumu'] }}</td></tr>
+                    <tr><td><strong>MELİH</strong></td><td>{{ perf['MELİH']['gunluk'] }}</td><td>{{ perf['MELİH']['haftalik'] }}</td><td>{{ perf['MELİH']['aylik'] }}</td><td style="font-weight:bold; color:#003366;">{{ perf['MELİH']['tumu'] }}</td></tr>
+                    <tr><td><strong>TAHA</strong></td><td>{{ perf['TAHA']['gunluk'] }}</td><td>{{ perf['TAHA']['haftalik'] }}</td><td>{{ perf['TAHA']['aylik'] }}</td><td style="font-weight:bold; color:#003366;">{{ perf['TAHA']['tumu'] }}</td></tr>
+                    <tr><td><strong>ZEYNEP</strong></td><td>{{ perf['ZEYNEP']['gunluk'] }}</td><td>{{ perf['ZEYNEP']['haftalik'] }}</td><td>{{ perf['ZEYNEP']['aylik'] }}</td><td style="font-weight:bold; color:#003366;">{{ perf['ZEYNEP']['tumu'] }}</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function toggleMenu() {
+            var menu = document.getElementById("actionsMenu");
+            menu.style.display = (menu.style.display === "block") ? "none" : "block";
+        }
+        window.onclick = function(event) {
+            if (!event.target.matches('.menu-dots')) {
+                var dropdowns = document.getElementsByClassName("dropdown-menu");
+                for (var i = 0; i < dropdowns.length; i++) {
+                    dropdowns[i].style.display = "none";
+                }
+            }
+        }
+        function openModal() { document.getElementById("statsModal").style.display = "block"; }
+        function closeModal() { document.getElementById("statsModal").style.display = "none"; }
+
+        // ANLIK SENKRONİZASYON MOTORU
+        let syncInterval = null;
+
+        // Sayfa açıldığında hafızada yenileme durumu varsa kaldığı yerden devam etsin
+        window.onload = function() {
+            if (localStorage.getItem("autoSync") === "true") {
+                startSync();
+            }
+        }
+
+        function toggleSync() {
+            if (syncInterval) {
+                stopSync();
+            } else {
+                startSync();
+            }
+        }
+
+        function startSync() {
+            localStorage.setItem("autoSync", "true");
+            document.getElementById("syncToggle").innerText = "🔄 Anlık Yenileme: AKTİF";
+            document.getElementById("syncToggle").classList.add("sync-active");
+            // Her 5 saniyede bir sayfayı arkada sessizce yeniler
+            syncInterval = setInterval(() => {
+                window.location.reload();
+            }, 5000); 
+        }
+
+        function stopSync() {
+            localStorage.setItem("autoSync", "false");
+            document.getElementById("syncToggle").innerText = "🔄 Anlık Yenileme: KAPALI";
+            document.getElementById("syncToggle").classList.remove("sync-active");
+            clearInterval(syncInterval);
+            syncInterval = null;
+        }
+    </script>
+</body>
+</html>
