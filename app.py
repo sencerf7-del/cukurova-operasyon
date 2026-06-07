@@ -66,6 +66,18 @@ def nobet_sirasi_anahtari(saat_str):
     except:
         return 9999
 
+# 🌍 İSTASYON PARÇALAMA MOTORU (Örn: AMS - ESB yapısını böler)
+def istasyon_ayir(ist_str, tip):
+    val = str(ist_str).strip()
+    if not val or val == 'nan' or val == '-': return ""
+    if "-" in val:
+        parcalar = val.split("-")
+        if tip == 'arrival':
+            return parcalar[0].strip() # İlk kısım (Nereden geldiği)
+        else:
+            return parcalar[1].strip() # İkinci kısım (Nereye gittiği)
+    return val
+
 @app.route('/')
 def ana_sayfa():
     bas_s = int(request.args.get('bas_s', 17))
@@ -99,6 +111,10 @@ def ana_sayfa():
         for p in personeller:
             if p['ad_soyad'] == u['personel_ad']: p_renk = p['renk']
 
+        # Havayolu kodunun sadece iki harfli kısmını veya ilk parçasını alıyoruz (Örn: XQ / SXS -> XQ)
+        h_kod = str(u['havayolu']).split("/")[0].strip() if u['havayolu'] else ""
+        if h_kod == "nan": h_kod = ""
+
         # ARRIVALS (GELİŞLER)
         if u['gelis_flight'] and str(u['gelis_flight']).strip() != '' and str(u['gelis_flight']).strip() != 'nan':
             g_flight = str(u['gelis_flight']).strip()
@@ -110,8 +126,9 @@ def ana_sayfa():
                 if is_odak: odak_count += 1
                 
                 duzenli_liste.append({
-                    'id': u['id'], 'havayolu': u['havayolu'], 'flight_no': g_flight,
+                    'id': u['id'], 'havayolu_kod': h_kod, 'flight_no': g_flight,
                     'saat': cleaned_sta, 'tip': 'arrival', 'park': u['park_pozisyonu'],
+                    'meydan': istasyon_ayir(u['istasyon'], 'arrival'),
                     'tamamlandi': u['tamamlandi'], 'personel_ad': u['personel_ad'], 
                     'personel_renk': p_renk, 'gece_mi': 1 if is_odak else 0
                 })
@@ -127,13 +144,14 @@ def ana_sayfa():
                 if is_odak: odak_count += 1
                 
                 duzenli_liste.append({
-                    'id': u['id'], 'havayolu': u['havayolu'], 'flight_no': gi_flight,
+                    'id': u['id'], 'havayolu_kod': h_kod, 'flight_no': gi_flight,
                     'saat': cleaned_std, 'tip': 'departure', 'park': u['park_pozisyonu'],
+                    'meydan': istasyon_ayir(u['istasyon'], 'departure'),
                     'tamamlandi': u['tamamlandi'], 'personel_ad': u['personel_ad'], 
                     'personel_renk': p_renk, 'gece_mi': 1 if is_odak else 0
                 })
 
-    # ⏱️ NÖBET SAAT DÖNGÜSÜNE GÖRE KUSURSUZ SIRALAMA
+    # ⏱️ AKŞAM 17:00'DEN SABAH 09:00'A KUSURSUZ NOBET SIRALAMASI
     duzenli_liste = sorted(duzenli_liste, key=lambda x: nobet_sirasi_anahtari(x['saat']))
 
     toplam_ucus = len(duzenli_liste)
@@ -162,24 +180,22 @@ def excel_yukle():
     for index, row in df.iterrows():
         if len(row) < 4: continue
         
-        # Sütunları netleştiriyoruz
         havayolu_arr = str(row.iloc[0]).strip() if not pd.isna(row.iloc[0]) else ''
         gelis_no = str(row.iloc[2]).strip() if not pd.isna(row.iloc[2]) else ''
         sta_saat = str(row.iloc[3]).strip() if not pd.isna(row.iloc[3]) else ''
         park_poz = str(row.iloc[4]).strip() if len(row) > 4 and not pd.isna(row.iloc[4]) else ''
+        istasyon_ham = str(row.iloc[9]).strip() if len(row) > 9 and not pd.isna(row.iloc[9]) else ''
         
         if "AIRLINE" in havayolu_arr or "ARRIVAL" in havayolu_arr: 
             continue
             
-        # Geliş uçağını kaydet
         if gelis_no and gelis_no != 'nan' and gelis_no != '-':
             if gelis_no.endswith('.0'): gelis_no = gelis_no[:-2]
             if park_poz.endswith('.0'): park_poz = park_poz[:-2]
             
-            cursor.execute('INSERT INTO ucuslar (havayolu, gelis_flight, sta, park_pozisyonu, gidis_flight, std, istasyon) VALUES (?, ?, ?, ?, "", "", "")', 
-                           (havayolu_arr, gelis_no, sta_saat, park_poz))
+            cursor.execute('INSERT INTO ucuslar (havayolu, gelis_flight, sta, park_pozisyonu, gidis_flight, std, istasyon) VALUES (?, ?, ?, ?, "", "", ?)', 
+                           (havayolu_arr, gelis_no, sta_saat, park_poz, istasyon_ham))
 
-        # Gidiş uçağını kaydet (Havayolu hücresi boş olsa bile uçuş no varsa asla kaçırma!)
         if len(row) >= 8:
             havayolu_dep = str(row.iloc[5]).strip() if not pd.isna(row.iloc[5]) else ''
             gidis_no = str(row.iloc[6]).strip() if not pd.isna(row.iloc[6]) else ''
@@ -189,7 +205,6 @@ def excel_yukle():
             if "AIRLINE" in havayolu_dep or "DEPARTURE" in havayolu_dep:
                 continue
                 
-            # EĞER GİDİŞ HAVAYOLU BOŞ KALDIYSA GELİŞTEKİ KODU KOPYALA
             if (havayolu_dep == '' or havayolu_dep == 'nan') and havayolu_arr != '':
                 havayolu_dep = havayolu_arr
                 
@@ -197,8 +212,8 @@ def excel_yukle():
                 if gidis_no.endswith('.0'): gidis_no = gidis_no[:-2]
                 if park_dep.endswith('.0'): park_dep = park_dep[:-2]
                 
-                cursor.execute('INSERT INTO ucuslar (havayolu, gelis_flight, sta, park_pozisyonu, gidis_flight, std, istasyon) VALUES (?, "", "", ?, ?, ?, "")', 
-                               (havayolu_dep, park_dep, gidis_no, std_saat))
+                cursor.execute('INSERT INTO ucuslar (havayolu, gelis_flight, sta, park_pozisyonu, gidis_flight, std, istasyon) VALUES (?, "", "", ?, ?, ?, ?)', 
+                               (havayolu_dep, park_dep, gidis_no, std_saat, istasyon_ham))
 
     conn.commit()
     conn.close()
