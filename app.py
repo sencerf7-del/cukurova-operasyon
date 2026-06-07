@@ -27,7 +27,7 @@ def veritabanini_kur():
             tamamlandi INTEGER DEFAULT 0,
             personel_ad TEXT DEFAULT ''
         )
-    '''' lines)
+    ''')
     conn.commit()
     conn.close()
 
