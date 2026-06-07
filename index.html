@@ -18,8 +18,14 @@
         .pers-mor { background-color: #6f42c1 !important; color: white; }
         
         .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; display: inline-block; }
-        .gece-ucus { background-color: #fff3cd !important; border-left: 4px solid #ffc107; }
-        .tamamlandi-satir { opacity: 0.35; background-color: #e9ecef !important; }
+        
+        /* 🌌 KANKANIN İSTEDİĞİ GECE ODAĞI ARKA PLAN TONU */
+        .gece-ucus { background-color: #e2eafc !important; border-left: 5px solid #1d3557; }
+        .tamamlandi-satir { opacity: 0.35; background-color: #e9ecef !important; border-left: none !important; }
+        
+        /* 🔵 KANKANIN İSTEDİĞİ RENK TONLARI */
+        .flight-arrival { color: #0056b3; font-weight: bold; font-size: 16px; }
+        .flight-departure { color: #d4af37; font-weight: bold; font-size: 16px; text-shadow: 0.5px 0.5px #555; }
         
         .menu-container { position: relative; display: inline-block; }
         .menu-dots { font-size: 24px; cursor: pointer; background: none; border: none; color: white; padding: 0 10px; }
@@ -28,7 +34,7 @@
         .dropdown-menu button:hover { background-color: #f1f1f1; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #ddd; }
         th { background-color: #003366; color: white; }
         .btn { background: #0056b3; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         input, select { width: 100%; padding: 6px; margin: 4px 0; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
@@ -47,7 +53,7 @@
 <body>
 
     <div class="header-bar">
-        <h2>✈️ Çukurova Uluslararası Havalimanı Meydan Operasyon</h2>
+        <h2>✈️ Çukurova Uluslararası Havalimanı Meydan Operasyon Paneli</h2>
         
         <div style="display: flex; align-items: center; gap: 15px;">
             <button id="syncToggle" class="sync-btn" onclick="toggleSync()">🔄 Anlık Yenileme: KAPALI</button>
@@ -62,7 +68,7 @@
     </div>
 
     <div style="background: #e6f0fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
-        <strong style="color: #003366;">⏱️ Odak Zaman Aralığı Seçimi:</strong>
+        <strong style="color: #003366;">⏱️ Gece Nöbeti / Odak Zaman Aralığı:</strong>
         <form method="GET" action="/" style="display: flex; align-items: center; gap: 8px; margin: 0;">
             <select name="bas_s" style="width: 65px;">{% for h in range(24) %}<option value="{{ h }}" {% if bas_s == h %}selected{% endif %}>{{ "%02d"|format(h) }}</option>{% endfor %}</select>:
             <select name="bas_d" style="width: 65px;">{% for m in range(0, 60, 5) %}<option value="{{ m }}" {% if bas_d == m %}selected{% endif %}>{{ "%02d"|format(m) }}</option>{% endfor %}</select>
@@ -98,20 +104,19 @@
 
         <div class="main-content">
             <div class="stats-grid">
-                <div class="stat-card"><h5>Total Uçuş</h5><p style="font-size:20px; font-weight:bold; margin:0; color:#003366;">{{ toplam_ucus }}</p></div>
-                <div class="stat-card" style="border-top-color: #ffcc00;"><h5>Odaktaki Uçuş</h5><p style="font-size:20px; font-weight:bold; margin:0; color:#cca300;">{{ gece_ucus }}</p></div>
+                <div class="stat-card"><h5>Toplam Hareket</h5><p style="font-size:20px; font-weight:bold; margin:0; color:#003366;">{{ toplam_ucus }}</p></div>
+                <div class="stat-card" style="border-top-color: #1d3557;"><h5>Nöbetteki / Odaktaki</h5><p style="font-size:20px; font-weight:bold; margin:0; color:#1d3557;">{{ gece_ucus }}</p></div>
                 <div class="stat-card" style="border-top-color: #28a745;"><h5>Tamamlanan</h5><p style="font-size:20px; font-weight:bold; margin:0; color:#28a745;">{{ tamamlanan_ucus }}</p></div>
             </div>
 
-            <h3>📅 Güncel Uçuş ve Bağlantı Programı</h3>
+            <h3>📅 Kronolojik Sıralı Meydan Uçuş Programı</h3>
             <table>
                 <thead>
                     <tr>
+                        <th>Tip</th>
+                        <th>Saat</th>
                         <th>Havayolu</th>
-                        <th>Geliş No</th>
-                        <th>STA</th>
-                        <th>Gidiş No</th>
-                        <th>STD</th>
+                        <th>Sefer No</th>
                         <th>Park Poz.</th>
                         <th>İşlem / Atanan</th>
                     </tr>
@@ -119,12 +124,27 @@
                 <tbody>
                     {% for ucus in ucuslar %}
                     <tr class="{% if ucus.gece_mi == 1 %}gece-ucus{% endif %} {% if ucus.tamamlandi == 1 %}tamamlandi-satir{% endif %}">
-                        <td><strong>{{ ucus.havayolu }}</strong></td>
-                        <td style="color: #28a745; font-weight: bold;">{{ ucus.gelis_flight }}</td>
-                        <td>{{ ucus.sta }}</td>
-                        <td style="color: #dc3545; font-weight: bold;">{{ ucus.gidis_flight }}</td>
-                        <td>{{ ucus.std }}</td>
-                        <td><span style="background: #ffcc00; color: #003366; padding: 2px 6px; border-radius: 4px; font-weight: bold;">{{ ucus.park_pozisyonu }}</span></td>
+                        <td>
+                            {% if ucus.tip == 'arrival' %}
+                            <span style="font-size: 18px;" title="Geliş (Arrival)">🛬</span>
+                            {% else %}
+                            <span style="font-size: 18px;" title="Gidiş (Departure)">🛫</span>
+                            {% endif %}
+                        </td>
+                        
+                        <td><strong>{{ ucus.saat }}</strong></td>
+                        
+                        <td>{{ ucus.havayolu }}</td>
+                        
+                        <td>
+                            {% if ucus.tip == 'arrival' %}
+                            <span class="flight-arrival">{{ ucus.flight_no }}</span>
+                            {% else %}
+                            <span class="flight-departure">{{ ucus.flight_no }}</span>
+                            {% endif %}
+                        </td>
+                        
+                        <td><span style="background: #003366; color: white; padding: 3px 8px; border-radius: 4px; font-weight: bold;">{{ ucus.park }}</span></td>
                         
                         <td>
                             {% if ucus.tamamlandi == 0 %}
@@ -143,7 +163,7 @@
                             {% else %}
                             <form action="/ucus-geri-al/{{ ucus.id }}" method="POST" style="margin: 0; display: flex; align-items: center; gap: 10px;">
                                 <span class="badge {{ ucus.personel_renk }}">✔️ {{ ucus.personel_ad }}</span>
-                                <button type="submit" style="background:#dc3545; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Geri Al</button>
+                                <button type="submit" style="background:#dc3545; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-weight:bold;">Geri Al</button>
                             </form>
                             {% endif %}
                         </td>
