@@ -2,7 +2,6 @@ from flask import Flask, render_template, request, redirect
 import sqlite3
 import pandas as pd
 import os
-from datetime import datetime
 
 app = Flask(__name__)
 DB_NAME = "havalimanı_operasyon.db"
@@ -32,15 +31,17 @@ def veritabanini_kur():
     conn.commit()
     conn.close()
 
-# Excel'den gelen kirli saat verilerini temizleyen yardımcı fonksiyon
 def saat_temizle(saat_verisi):
     val = str(saat_verisi).strip()
     if not val or val == 'nan' or val == '-': return ""
-    if " " in val: # Eğer içinde tarih de varsa (Örn: 07.06.2026 18:35) sadece saati al
+    if " " in val:
         val = val.split(" ")[-1]
     if ":" in val:
         parcalar = val.split(":")
-        return f"{int(parcalar[0]):02d}:{int(parcalar[1]):02d}"
+        try:
+            return f"{int(parcalar[0]):02d}:{int(parcalar[1]):02d}"
+        except:
+            return ""
     return ""
 
 def zaman_aralikta_mi(saat_str, bas_s, bas_d, bit_s, bit_d):
@@ -53,16 +54,17 @@ def zaman_aralikta_mi(saat_str, bas_s, bas_d, bit_s, bit_d):
         return b_dk <= ucus_dk < bit_dk
     except: return False
 
-# 🌌 NÖBET SAATİNE GÖRE SIRALAMA MOTORU (17:00'den sabah 09:00'a)
 def nobet_sirasi_anahtari(saat_str):
     if not saat_str or ":" not in saat_str: return 9999
-    h, m = map(int, saat_str.split(":"))
-    dakika = h * 60 + m
-    # Eğer saat 17:00 ile 23:59 arasındaysa öncelikli yap, gece 00:00 ve sonrasını altına ekle
-    if h >= 17:
-        return dakika - (17 * 60)
-    else:
-        return dakika + (7 * 60) # 24 saat döngüsünü nöbete göre kaydırıyoruz
+    try:
+        h, m = map(int, saat_str.split(":"))
+        dakika = h * 60 + m
+        if h >= 17:
+            return dakika - (17 * 60)
+        else:
+            return dakika + (7 * 60)
+    except:
+        return 9999
 
 @app.route('/')
 def ana_sayfa():
@@ -131,7 +133,7 @@ def ana_sayfa():
                     'personel_renk': p_renk, 'gece_mi': 1 if is_odak else 0
                 })
 
-    # ⏱️ NÖBET SAAT DÖNGÜSÜNE GÖRE KUSURSUZ SIRALAMA (17:00 -> 09:00)
+    # ⏱️ NÖBET SAAT DÖNGÜSÜNE GÖRE KUSURSUZ SIRALAMA
     duzenli_liste = sorted(duzenli_liste, key=lambda x: nobet_sirasi_anahtari(x['saat']))
 
     toplam_ucus = len(duzenli_liste)
@@ -150,7 +152,6 @@ def excel_yukle():
     filepath = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(filepath)
     try:
-        # Excel dosyasının üstündeki boş satırları (skiprows=7) atlayarak tam veri alanını okuyoruz
         df = pd.read_csv(filepath, skiprows=7) if file.filename.endswith('.csv') else pd.read_excel(filepath, skiprows=7)
     except:
         return "Excel okunamadı", 500
@@ -161,13 +162,13 @@ def excel_yukle():
     for index, row in df.iterrows():
         if len(row) < 4: continue
         
-        # Sütun endekslerini kopyaladığın Excel yapısına göre tam eşitledim kanka
+        # Sütunları netleştiriyoruz
         havayolu_arr = str(row.iloc[0]).strip() if not pd.isna(row.iloc[0]) else ''
         gelis_no = str(row.iloc[2]).strip() if not pd.isna(row.iloc[2]) else ''
         sta_saat = str(row.iloc[3]).strip() if not pd.isna(row.iloc[3]) else ''
         park_poz = str(row.iloc[4]).strip() if len(row) > 4 and not pd.isna(row.iloc[4]) else ''
         
-        if "AIRLINE" in havayolu_arr or "ARRIVAL" in havayolu_arr or havayolu_arr == 'nan': 
+        if "AIRLINE" in havayolu_arr or "ARRIVAL" in havayolu_arr: 
             continue
             
         # Geliş uçağını kaydet
@@ -178,16 +179,19 @@ def excel_yukle():
             cursor.execute('INSERT INTO ucuslar (havayolu, gelis_flight, sta, park_pozisyonu, gidis_flight, std, istasyon) VALUES (?, ?, ?, ?, "", "", "")', 
                            (havayolu_arr, gelis_no, sta_saat, park_poz))
 
-        # Gidiş uçağını kaydet (Sağ taraftaki sütunlar)
+        # Gidiş uçağını kaydet (Havayolu hücresi boş olsa bile uçuş no varsa asla kaçırma!)
         if len(row) >= 8:
             havayolu_dep = str(row.iloc[5]).strip() if not pd.isna(row.iloc[5]) else ''
             gidis_no = str(row.iloc[6]).strip() if not pd.isna(row.iloc[6]) else ''
             std_saat = str(row.iloc[7]).strip() if not pd.isna(row.iloc[7]) else ''
-            # Eğer gidişin park yeri sağda boşsa soldaki park yerini ortak kabul et
-            park_dep = str(row.iloc[8]).strip() if not pd.isna(row.iloc[8]) else park_poz
+            park_dep = str(row.iloc[8]).strip() if len(row) > 8 and not pd.isna(row.iloc[8]) else park_poz
             
-            if "AIRLINE" in havayolu_dep or "DEPARTURE" in havayolu_dep or havayolu_dep == 'nan': 
+            if "AIRLINE" in havayolu_dep or "DEPARTURE" in havayolu_dep:
                 continue
+                
+            # EĞER GİDİŞ HAVAYOLU BOŞ KALDIYSA GELİŞTEKİ KODU KOPYALA
+            if (havayolu_dep == '' or havayolu_dep == 'nan') and havayolu_arr != '':
+                havayolu_dep = havayolu_arr
                 
             if gidis_no and gidis_no != 'nan' and gidis_no != '-':
                 if gidis_no.endswith('.0'): gidis_no = gidis_no[:-2]
