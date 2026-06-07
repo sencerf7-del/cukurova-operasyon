@@ -19,13 +19,13 @@
         
         .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; display: inline-block; }
         
-        /* 🌌 YUMUŞAK GECE MAVİSİ ODAK ARKA PLANI */
+        /* 🌌 GECE ODAĞI ARKA PLAN TONU */
         .gece-ucus { background-color: #e8effa !important; border-left: 5px solid #003366; }
         .tamamlandi-satir { opacity: 0.30; background-color: #e9ecef !important; border-left: none !important; }
         
-        /* 🔵 KANKANIN İSTEDİĞİ SEFER NUMARASI RENKLERİ */
-        .flight-arrival { color: #0040ff; font-weight: bold; font-size: 15px; }
-        .flight-departure { color: #e6b800; font-weight: bold; font-size: 15px; text-shadow: 0.3px 0.3px #666; }
+        /* 🔵 SEFER NUMARASI STRATEJİK RENKLERİ */
+        .flight-arrival { color: #0040ff; font-weight: bold; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+        .flight-departure { color: #e6b800; font-weight: bold; font-size: 16px; text-shadow: 0.3px 0.3px #555; display: flex; align-items: center; gap: 8px; }
         
         .menu-container { position: relative; display: inline-block; }
         .menu-dots { font-size: 24px; cursor: pointer; background: none; border: none; color: white; padding: 0 10px; }
@@ -34,7 +34,7 @@
         .dropdown-menu button:hover { background-color: #f1f1f1; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #ddd; vertical-align: middle; }
         th { background-color: #003366; color: white; }
         .btn { background: #0056b3; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         input, select { width: 100%; padding: 6px; margin: 4px 0; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
@@ -111,35 +111,30 @@
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 10%;">Hareket</th>
-                        <th style="width: 15%;">Saat</th>
-                        <th style="width: 40%;">Uçuş (Havayolu - Sefer No)</th>
-                        <th style="width: 15%;">Park Poz.</th>
+                        <th style="width: 35%;">Uçuş (Havayolu + Sefer No)</th>
+                        <th style="width: 15%;">Saat (STA/STD)</th>
+                        <th style="width: 15%;">Kapı (Park)</th>
+                        <th style="width: 15%;">Meydan</th>
                         <th style="width: 20%;">İşlem / Atanan</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for ucus in ucuslar %}
                     <tr class="{% if ucus.gece_mi == 1 %}gece-ucus{% endif %} {% if ucus.tamamlandi == 1 %}tamamlandi-satir{% endif %}">
+                        
                         <td>
                             {% if ucus.tip == 'arrival' %}
-                            <span style="font-size: 20px;" title="Geliş">🛬</span>
+                            <span class="flight-arrival">🛬 {{ ucus.havayolu_kod }}{{ ucus.flight_no }}</span>
                             {% else %}
-                            <span style="font-size: 20px;" title="Gidiş">🛫</span>
+                            <span class="flight-departure">🛫 {{ ucus.havayolu_kod }}{{ ucus.flight_no }}</span>
                             {% endif %}
                         </td>
                         
                         <td><span style="font-size: 16px; font-weight: bold;">{{ ucus.saat }}</span></td>
                         
-                        <td>
-                            {% if ucus.tip == 'arrival' %}
-                            <span class="flight-arrival">{{ ucus.havayolu }} {{ ucus.flight_no }}</span>
-                            {% else %}
-                            <span class="flight-departure">{{ ucus.havayolu }} {{ ucus.flight_no }}</span>
-                            {% endif %}
-                        </td>
-                        
                         <td><span style="background: #003366; color: white; padding: 4px 10px; border-radius: 4px; font-weight: bold;">{{ ucus.park }}</span></td>
+                        
+                        <td><strong style="color: #555;">{{ ucus.meydan }}</strong></td>
                         
                         <td>
                             {% if ucus.tamamlandi == 0 %}
