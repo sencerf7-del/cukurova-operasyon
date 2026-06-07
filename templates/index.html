@@ -18,15 +18,16 @@
         .pers-mor { background-color: #6f42c1 !important; color: white; }
         
         .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; display: inline-block; }
-        .gece-ucus { background-color: #e8effa !important; border-left: 5px solid #003366; }
+        
+        /* 🌌 GÖZÜ YORMAYAN ASİL GECE MAVİSİ ODAK ARKA PLAN TONU */
+        .gece-ucus { background-color: #eaf2ff !important; border-left: 5px solid #003366; }
         .tamamlandi-satir { opacity: 0.30; background-color: #e9ecef !important; border-left: none !important; }
         
         .flight-arrival { color: #0040ff; font-weight: bold; font-size: 16px; }
-        .flight-departure { color: #e6b800; font-weight: bold; font-size: 16px; text-shadow: 0.3px 0.3px #555; }
+        .flight-departure { color: #cc9900; font-weight: bold; font-size: 16px; text-shadow: 0.3px 0.3px #555; }
         
-        /* ✈️ FLIGHTRADAR24 KANKA BUTON STİLİ */
-        .fr24-btn { background-color: #1d3557; color: #ffcc00; border: none; padding: 5px 10px; border-radius: 4px; font-weight: bold; font-size: 11px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
-        .fr24-btn:hover { background-color: #002244; color: #fff; }
+        .fr24-btn { background-color: #003366; color: #ffcc00; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 12px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+        .fr24-btn:hover { background-color: #001f4d; color: #fff; }
         
         .menu-container { position: relative; display: inline-block; }
         .menu-dots { font-size: 24px; cursor: pointer; background: none; border: none; color: white; padding: 0 10px; }
@@ -67,12 +68,12 @@
     </div>
 
     <div style="background: #e6f0fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
-        <strong style="color: #003366;">⏱️ Gece Nöbeti / Odak Zaman Aralığı:</strong>
+        <strong style="color: #003366;">⏱️ Gece Nöbeti / Odak Zaman Aralığı Seçimi:</strong>
         <form method="GET" action="/" style="display: flex; align-items: center; gap: 8px; margin: 0;">
             <select name="bas_s" style="width: 65px;">{% for h in range(24) %}<option value="{{ h }}" {% if bas_s == h %}selected{% endif %}>{{ "%02d"|format(h) }}</option>{% endfor %}</select>:
             <select name="bas_d" style="width: 65px;">{% for m in range(0, 60, 5) %}<option value="{{ m }}" {% if bas_d == m %}selected{% endif %}>{{ "%02d"|format(m) }}</option>{% endfor %}</select>
             <span>-</span>
-            <select name="bit_s" style="width: 65px;">{% for h in range(24) %}<option value="{{ h }}" {% if bit_s == h %}selected{% endif %}>{{ "%02d"|format(h) }}</option>{% endfor %}</for>
+            <select name="bit_s" style="width: 65px;">{% for h in range(24) %}<option value="{{ h }}" {% if bit_s == h %}selected{% endif %}>{{ "%02d"|format(h) }}</option>{% endfor %}</select>:
             <select name="bit_d" style="width: 65px;">{% for m in range(0, 60, 5) %}<option value="{{ m }}" {% if bit_d == m %}selected{% endif %}>{{ "%02d"|format(m) }}</option>{% endfor %}</select>
             <button type="submit" class="btn" style="padding: 5px 10px;">Uygula</button>
         </form>
@@ -112,12 +113,12 @@
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 30%;">Uçuş (Havayolu + Sefer No)</th>
-                        <th style="width: 12%;">Saat</th>
-                        <th style="width: 12%;">Kapı</th>
-                        <th style="width: 13%;">Meydan</th>
-                        <th style="width: 15%;">Radar</th>
-                        <th style="width: 18%;">İşlem / Atanan</th>
+                        <th style="width: 32%;">Uçuş (Havayolu + Sefer No)</th>
+                        <th style="width: 14%;">Saat (STA/STD)</th>
+                        <th style="width: 14%;">Kapı (Park)</th>
+                        <th style="width: 12%;">Meydan</th>
+                        <th style="width: 13%;">Radar</th>
+                        <th style="width: 15%;">İşlem / Atanan</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -134,9 +135,15 @@
                         
                         <td><span style="font-size: 16px; font-weight: bold;">{{ ucus.saat }}</span></td>
                         
-                        <td><span style="background: #003366; color: white; padding: 4px 10px; border-radius: 4px; font-weight: bold;">{{ ucus.park }}</span></td>
+                        <td>
+                            {% if ucus.park %}
+                            <span style="background: #003366; color: white; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 14px;">{{ ucus.park }}</span>
+                            {% else %}
+                            <span style="color: #bbb; font-style: italic;">Açık Poz.</span>
+                            {% endif %}
+                        </td>
                         
-                        <td><strong style="color: #555;">{{ ucus.meydan }}</strong></td>
+                        <td><strong style="color: #444;">{{ ucus.meydan }}</strong></td>
                         
                         <td>
                             <a href="https://www.flightradar24.com/data/flights/{{ ucus.havayolu_kod }}{{ ucus.flight_no }}" target="_blank" class="fr24-btn">
