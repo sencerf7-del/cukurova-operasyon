@@ -34,7 +34,6 @@ def veritabanini_kur():
 def saat_temizle(saat_verisi):
     val = str(saat_verisi).strip().lower()
     if not val or val == 'nan' or val == '-' or val == 'nat': return ""
-    # Eğer hücrede tarih ve saat birleşikse (Örn: 2026-06-07 18:35:00) sadece saati cımbızla çek
     if " " in val:
         val = val.split(" ")[-1]
     if ":" in val:
@@ -61,7 +60,6 @@ def nobet_sirasi_anahtari(saat_str):
     try:
         h, m = map(int, saat_str.split(":"))
         dakika = h * 60 + m
-        # 17:00'den gece yarısına kadar olanları öne al, 00:00 sonrasını arkasına ekle
         if h >= 17:
             return dakika - (17 * 60)
         else:
@@ -170,7 +168,6 @@ def excel_yukle():
     filepath = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(filepath)
     try:
-        # Hata payını sıfırlamak için tüm sütunları zorla string (metin) olarak okuyoruz
         df = pd.read_csv(filepath, skiprows=7, dtype=str) if file.filename.endswith('.csv') else pd.read_excel(filepath, skiprows=7, dtype=str)
     except:
         return "Excel okunamadı", 500
@@ -179,14 +176,14 @@ def excel_yukle():
     cursor = conn.cursor()
     
     for index, row in df.iterrows():
-        if len(row) < 5: continue
+        if len(row) < 9: continue
         
         havayolu_arr = str(row.iloc[0]).strip() if not pd.isna(row.iloc[0]) else ''
         gelis_no = str(row.iloc[2]).strip() if not pd.isna(row.iloc[2]) else ''
         sta_saat = str(row.iloc[3]).strip() if not pd.isna(row.iloc[3]) else ''
         
-        # 🚨 KAPI NUMARASI SÜTUNU (Bridge INT - Sütun 4)
-        park_poz = str(row.iloc[4]).strip() if not pd.isna(row.iloc[4]) else ''
+        # 🚨 DOĞRU PARK POZİSYONU SÜTUNU (Bridge INT -> Sütun 8) kanka!
+        park_poz = str(row.iloc[8]).strip() if not pd.isna(row.iloc[8]) else ''
         if park_poz.lower() == 'nan' or park_poz == '-': park_poz = ""
         
         istasyon_ham = str(row.iloc[9]).strip() if len(row) > 9 and not pd.isna(row.iloc[9]) else ''
@@ -203,20 +200,15 @@ def excel_yukle():
                            (havayolu_arr, gelis_no, sta_saat, park_poz, istasyon_ham))
 
         # Gidiş uçağını yaz
-        if len(row) >= 8:
-            gidis_no = str(row.iloc[6]).strip() if not pd.isna(row.iloc[6]) else ''
-            std_saat = str(row.iloc[7]).strip() if not pd.isna(row.iloc[7]) else ''
+        gidis_no = str(row.iloc[5]).strip() if not pd.isna(row.iloc[5]) else ''
+        std_saat = str(row.iloc[6]).strip() if not pd.isna(row.iloc[6]) else ''
+        
+        if gidis_no and gidis_no.lower() != 'nan' and gidis_no != '-':
+            if gidis_no.endswith('.0'): gidis_no = gidis_no[:-2]
+            if park_poz.endswith('.0'): park_poz = park_poz[:-2]
             
-            # Gidiş park yeri hücresi boşsa sol taraftaki park yerini devral
-            park_dep = str(row.iloc[8]).strip() if len(row) > 8 and not pd.isna(row.iloc[8]) else park_poz
-            if park_dep.lower() == 'nan' or park_dep == '-': park_dep = park_poz
-            if park_dep.endswith('.0'): park_dep = park_dep[:-2]
-            
-            if gidis_no and gidis_no.lower() != 'nan' and gidis_no != '-':
-                if gidis_no.endswith('.0'): gidis_no = gidis_no[:-2]
-                
-                cursor.execute('INSERT INTO ucuslar (havayolu, gelis_flight, sta, park_pozisyonu, gidis_flight, std, istasyon) VALUES (?, "", "", ?, ?, ?, ?)', 
-                               (havayolu_arr, park_dep, gidis_no, std_saat, istasyon_ham))
+            cursor.execute('INSERT INTO ucuslar (havayolu, gelis_flight, sta, park_pozisyonu, gidis_flight, std, istasyon) VALUES (?, "", "", ?, ?, ?, ?)', 
+                           (havayolu_arr, park_poz, gidis_no, std_saat, istasyon_ham))
 
     conn.commit()
     conn.close()
