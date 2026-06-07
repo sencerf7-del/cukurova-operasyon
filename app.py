@@ -194,5 +194,7 @@ def pdf_indir():
     return response
 
 if __name__ == '__main__':
+    # Bu satırı ekliyoruz:
+    if not os.path.exists(DB_NAME): open(DB_NAME, 'w').close() 
     veritabanini_kur()
     app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
