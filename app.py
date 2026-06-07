@@ -66,7 +66,6 @@ def ana_sayfa():
             perf[p_ad]['aylik'] += 1
             perf[p_ad]['tumu'] += 1
 
-    # Tüm uçuşları tek tek işleyip saate göre homojen bir liste haline getiriyoruz
     duzenli_liste = []
     odak_count = 0
     
@@ -75,29 +74,37 @@ def ana_sayfa():
         for p in personeller:
             if p['ad_soyad'] == u['personel_ad']: p_renk = p['renk']
 
-        # Eğer Geliş uçağı ise (gelis_flight doluysa)
-        if u['gelis_flight'] and u['gelis_flight'] != '':
+        # Geliş uçuşu varsa havuz listesine ekle
+        if u['gelis_flight'] and str(u['gelis_flight']).strip() != '' and str(u['gelis_flight']).strip() != 'nan':
+            g_flight = str(u['gelis_flight']).strip()
+            if g_flight.endswith('.0'): g_flight = g_flight[:-2]
+            
             is_odak = zaman_aralikta_mi(u['sta'], bas_s, bas_d, bit_s, bit_d)
             if is_odak: odak_count += 1
+            
             duzenli_liste.append({
-                'id': u['id'], 'havayolu': u['havayolu'], 'flight_no': u['gelis_flight'],
+                'id': u['id'], 'havayolu': u['havayolu'], 'flight_no': g_flight,
                 'saat': u['sta'], 'tip': 'arrival', 'park': u['park_pozisyonu'],
-                'istasyon': u['istasyon'], 'tamamlandi': u['tamamlandi'],
-                'personel_ad': u['personel_ad'], 'personel_renk': p_renk, 'gece_mi': 1 if is_odak else 0
+                'tamamlandi': u['tamamlandi'], 'personel_ad': u['personel_ad'], 
+                'personel_renk': p_renk, 'gece_mi': 1 if is_odak else 0
             })
             
-        # Eğer Gidiş uçağı ise (gidis_flight doluysa)
-        if u['gidis_flight'] and u['gidis_flight'] != '':
+        # Gidiş uçuşu varsa havuz listesine ekle
+        if u['gidis_flight'] and str(u['gidis_flight']).strip() != '' and str(u['gidis_flight']).strip() != 'nan':
+            gi_flight = str(u['gidis_flight']).strip()
+            if gi_flight.endswith('.0'): gi_flight = gi_flight[:-2]
+            
             is_odak = zaman_aralikta_mi(u['std'], bas_s, bas_d, bit_s, bit_d)
             if is_odak: odak_count += 1
+            
             duzenli_liste.append({
-                'id': u['id'], 'havayolu': u['havayolu'], 'flight_no': u['gidis_flight'],
+                'id': u['id'], 'havayolu': u['havayolu'], 'flight_no': gi_flight,
                 'saat': u['std'], 'tip': 'departure', 'park': u['park_pozisyonu'],
-                'istasyon': u['istasyon'], 'tamamlandi': u['tamamlandi'],
-                'personel_ad': u['personel_ad'], 'personel_renk': p_renk, 'gece_mi': 1 if is_odak else 0
+                'tamamlandi': u['tamamlandi'], 'personel_ad': u['personel_ad'], 
+                'personel_renk': p_renk, 'gece_mi': 1 if is_odak else 0
             })
 
-    # TAMAMEN SAATE GÖRE SIRALIYORUZ (00:00'dan 23:59'a kronolojik)
+    # Tamamen saate göre (00:00 -> 23:59) kronolojik sıralama
     duzenli_liste = sorted(duzenli_liste, key=lambda x: x['saat'] if x['saat'] else '99:99')
 
     toplam_ucus = len(duzenli_liste)
@@ -148,7 +155,6 @@ def excel_yukle():
             gidis_no = str(row.iloc[6]).strip() if not pd.isna(row.iloc[6]) else ''
             std_saat = str(row.iloc[7]).strip() if not pd.isna(row.iloc[7]) else ''
             park_dep = str(row.iloc[8]).strip() if len(row) > 8 and not pd.isna(row.iloc[8]) else ''
-            istasyon = str(row.iloc[9]).strip() if len(row) > 9 and not pd.isna(row.iloc[9]) else ''
             
             if "AIRLINE" in havayolu_dep or "DEPARTURE" in havayolu_dep: havayolu_dep = ''
                 
@@ -158,9 +164,9 @@ def excel_yukle():
                 
                 mevcut_dep = cursor.execute('SELECT id FROM ucuslar WHERE gidis_flight=?', (gidis_no,)).fetchone()
                 if mevcut_dep:
-                    cursor.execute('UPDATE ucuslar SET havayolu=?, std=?, park_pozisyonu=?, istasyon=? WHERE id=?', (havayolu_dep, std_saat, park_dep, istasyon, mevcut_dep[0]))
+                    cursor.execute('UPDATE ucuslar SET havayolu=?, std=?, park_pozisyonu=? WHERE id=?', (havayolu_dep, std_saat, park_dep, mevcut_dep[0]))
                 else:
-                    cursor.execute('INSERT INTO ucuslar (havayolu, gelis_flight, sta, park_pozisyonu, gidis_flight, std, istasyon) VALUES (?, "", "", ?, ?, ?, ?)', (havayolu_dep, park_dep, gidis_no, std_saat, istasyon))
+                    cursor.execute('INSERT INTO ucuslar (havayolu, gelis_flight, sta, park_pozisyonu, gidis_flight, std, istasyon) VALUES (?, "", "", ?, ?, ?, "")', (havayolu_dep, park_dep, gidis_no, std_saat))
 
     conn.commit()
     conn.close()
