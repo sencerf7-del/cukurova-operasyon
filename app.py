@@ -1,11 +1,7 @@
-from flask import Flask, render_template, request, redirect, make_response
+from flask import Flask, render_template, request, redirect
 import sqlite3
 import pandas as pd
 import os
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib import colors
 
 app = Flask(__name__)
 DB_NAME = "havalimanı_operasyon.db"
@@ -31,7 +27,7 @@ def veritabanini_kur():
             tamamlandi INTEGER DEFAULT 0,
             personel_ad TEXT DEFAULT ''
         )
-    ''')
+    '''' lines)
     conn.commit()
     conn.close()
 
@@ -44,13 +40,6 @@ def zaman_aralikta_mi(saat_str, bas_s, bas_d, bit_s, bit_d):
         if b_dk > bit_dk: return ucus_dk >= b_dk or ucus_dk < bit_dk
         return b_dk <= ucus_dk < bit_dk
     except: return False
-
-def turkce_temizle(metin):
-    metin = str(metin)
-    harfler = {'Ç':'C','ç':'c','Ğ':'G','ğ':'g','İ':'I','ı':'i','Ö':'O','ö':'o','Ş':'S','ş':'s','Ü':'U','ü':'u'}
-    for kaynak, hedef in harfler.items():
-        metin = metin.replace(kaynak, hedef)
-    return metin
 
 @app.route('/')
 def ana_sayfa():
@@ -154,47 +143,8 @@ def ucus_geri_al(ucus_id):
     conn.close()
     return redirect('/')
 
-@app.route('/pdf-indir')
-def pdf_indir():
-    bas_s = int(request.args.get('bas_s', 17))
-    bas_d = int(request.args.get('bas_d', 0))
-    bit_s = int(request.args.get('bit_s', 9))
-    bit_d = int(request.args.get('bit_d', 0))
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    ucuslar_raw = cursor.execute('SELECT * FROM ucuslar').fetchall()
-    conn.close()
-    rapor_ucuslar = []
-    for u in ucuslar_raw:
-        if zaman_aralikta_mi(u[3], bas_s, bas_d, bit_s, bit_d) or zaman_aralikta_mi(u[5], bas_s, bas_d, bit_s, bit_d):
-            p_ad = turkce_temizle(u[9]) if u[8] == 1 else "Atanmadi"
-            rapor_ucuslar.append([turkce_temizle(u[1]), turkce_temizle(f"{u[2]} / {u[3]}"), turkce_temizle(f"{u[4]} / {u[5]}"), turkce_temizle(u[6]), p_ad])
-    response = make_response()
-    response.headers['Content-Type'] = 'application/pdf'
-    response.headers['Content-Disposition'] = 'attachment; filename=cukurova_odak_raporu.pdf'
-    doc = SimpleDocTemplate(response, pagesize=letter)
-    story = []
-    styles = getSampleStyleSheet()
-    story.append(Paragraph("CUKUROVA ULUSLARARASI HAVALIMANI", styles['Title']))
-    story.append(Paragraph(f"Odak Araligi Ucus Raporu ({bas_s:02d}:{bas_d:02d} - {bit_s:02d}:{bit_d:02d})", styles['Heading2']))
-    story.append(Spacer(1, 15))
-    headers = ["Havayolu", "Gelis / STA", "Gidis / STD", "Park Poz.", "Memur Durumu"]
-    data = [headers] + rapor_ucuslar
-    t = Table(data, colWidths=[80, 110, 110, 70, 110])
-    t.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#003366')),
-        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('BOTTOMPADDING', (0,0), (-1,0), 8),
-        ('GRID', (0,0), (-1,-1), 1, colors.grey),
-        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#f2f2f2')])
-    ]))
-    story.append(t)
-    doc.build(story)
-    return response
-
 if __name__ == '__main__':
-    # Bu satırı ekliyoruz:
-    if not os.path.exists(DB_NAME): open(DB_NAME, 'w').close() 
+    if not os.path.exists(DB_NAME):
+        open(DB_NAME, 'w').close()
     veritabanini_kur()
-    app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
+    app.run(host='0.0.0.0', port=5000, debug=False)
