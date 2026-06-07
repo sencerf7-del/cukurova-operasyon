@@ -18,17 +18,23 @@
         .pers-mor { background-color: #6f42c1 !important; color: white; }
         
         .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; display: inline-block; }
-        .gece-ucus { background-color: #fff3cd !important; border-left: 4px solid #ffc107; }
-        .tamamlandi-satir { opacity: 0.35; background-color: #e9ecef !important; }
+        
+        /* 🌌 GECE ODAĞI ARKA PLAN TONU */
+        .gece-ucus { background-color: #e2eafc !important; border-left: 5px solid #1d3557; }
+        .tamamlandi-satir { opacity: 0.35; background-color: #e9ecef !important; border-left: none !important; }
+        
+        /* 🔵 KANKANIN İSTEDİĞİ JİLET RENK TONLARI */
+        .flight-arrival { color: #0056b3; font-weight: bold; font-size: 15px; }
+        .flight-departure { color: #cc9900; font-weight: bold; font-size: 15px; }
         
         .menu-container { position: relative; display: inline-block; }
         .menu-dots { font-size: 24px; cursor: pointer; background: none; border: none; color: white; padding: 0 10px; }
         .dropdown-menu { display: none; position: absolute; right: 0; background-color: white; min-width: 180px; box-shadow: 0px 8px 16px rgba(0,0,0,0.2); border-radius: 4px; z-index: 100; }
-        .dropdown-menu a, .dropdown-menu button { color: #333; padding: 12px 16px; text-decoration: none; display: block; border: none; background: none; width: 100%; text-align: left; font-size: 14px; cursor: pointer; }
-        .dropdown-menu a:hover, .dropdown-menu button:hover { background-color: #f1f1f1; }
+        .dropdown-menu button { color: #333; padding: 12px 16px; border: none; background: none; width: 100%; text-align: left; font-size: 14px; cursor: pointer; }
+        .dropdown-menu button:hover { background-color: #f1f1f1; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #ddd; }
         th { background-color: #003366; color: white; }
         .btn { background: #0056b3; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         input, select { width: 100%; padding: 6px; margin: 4px 0; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
@@ -38,7 +44,6 @@
         .modal { display: none; position: fixed; z-index: 200; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4); }
         .modal-content { background-color: white; margin: 15% auto; padding: 20px; border-radius: 8px; width: 40%; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
         
-        /* Yenileme Butonu Stili */
         .sync-btn { background-color: #ff9f43; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; }
         .sync-active { background-color: #28a745; position: relative; }
         .sync-active::after { content: "●"; color: #fff; margin-left: 5px; animation: blink 1s infinite; }
@@ -48,7 +53,7 @@
 <body>
 
     <div class="header-bar">
-        <h2>✈️ Çukurova Uluslararası Havalimanı Meydan Operasyon</h2>
+        <h2>✈️ Çukurova Uluslararası Havalimanı Meydan Operasyon Paneli</h2>
         
         <div style="display: flex; align-items: center; gap: 15px;">
             <button id="syncToggle" class="sync-btn" onclick="toggleSync()">🔄 Anlık Yenileme: KAPALI</button>
@@ -57,14 +62,13 @@
                 <button class="menu-dots" onclick="toggleMenu()">⋮</button>
                 <div class="dropdown-menu" id="actionsMenu">
                     <button onclick="openModal()">📊 Personel İstatistikleri</button>
-                    <a href="/pdf-indir?bas_s={{bas_s}}&bas_d={{bas_d}}&bit_s={{bit_s}}&bit_d={{bit_d}}">📄 Günün Özetini İndir (PDF)</a>
                 </div>
             </div>
         </div>
     </div>
 
     <div style="background: #e6f0fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
-        <strong style="color: #003366;">⏱️ Odak Zaman Aralığı Seçimi:</strong>
+        <strong style="color: #003366;">⏱️ Gece Nöbeti / Odak Zaman Aralığı:</strong>
         <form method="GET" action="/" style="display: flex; align-items: center; gap: 8px; margin: 0;">
             <select name="bas_s" style="width: 65px;">{% for h in range(24) %}<option value="{{ h }}" {% if bas_s == h %}selected{% endif %}>{{ "%02d"|format(h) }}</option>{% endfor %}</select>:
             <select name="bas_d" style="width: 65px;">{% for m in range(0, 60, 5) %}<option value="{{ m }}" {% if bas_d == m %}selected{% endif %}>{{ "%02d"|format(m) }}</option>{% endfor %}</select>
@@ -83,6 +87,10 @@
                 <button type="submit" class="btn" style="width:100%; margin-top:5px;">Excel Yükle / Güncelle</button>
             </form>
 
+            <form action="/sistemi-sifirla" method="POST" style="margin-top: 20px;" onsubmit="return confirm('DİKKAT: Tüm uçuş listesi ve personel performansları tamamen silinecek! Emin misiniz?');">
+                <button type="submit" style="width: 100%; background-color: #dc3545; color: white; border: none; padding: 10px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">🚨 Tüm Listeyi Sıfırla</button>
+            </form>
+
             <h3 style="margin-top: 35px;">📋 Aktif Personel Listesi</h3>
             <div style="display: flex; flex-direction: column; gap: 6px;">
                 <div style="padding: 10px; border-radius: 4px; font-weight: bold; font-size: 15px;" class="pers-mavi">• ŞAHİN</div>
@@ -96,39 +104,44 @@
 
         <div class="main-content">
             <div class="stats-grid">
-                <div class="stat-card"><h5>Total Uçuş</h5><p style="font-size:20px; font-weight:bold; margin:0; color:#003366;">{{ toplam_ucus }}</p></div>
-                <div class="stat-card" style="border-top-color: #ffcc00;"><h5>Odaktaki Uçuş</h5><p style="font-size:20px; font-weight:bold; margin:0; color:#cca300;">{{ gece_ucus }}</p></div>
+                <div class="stat-card"><h5>Toplam Hareket</h5><p style="font-size:20px; font-weight:bold; margin:0; color:#003366;">{{ toplam_ucus }}</p></div>
+                <div class="stat-card" style="border-top-color: #1d3557;"><h5>Nöbetteki / Odaktaki</h5><p style="font-size:20px; font-weight:bold; margin:0; color:#1d3557;">{{ gece_ucus }}</p></div>
                 <div class="stat-card" style="border-top-color: #28a745;"><h5>Tamamlanan</h5><p style="font-size:20px; font-weight:bold; margin:0; color:#28a745;">{{ tamamlanan_ucus }}</p></div>
             </div>
 
-            <h3>📅 Güncel Uçuş ve Bağlantı Programı</h3>
+            <h3>📅 Kronolojik Sıralı Meydan Uçuş Programı</h3>
             <table>
                 <thead>
                     <tr>
-                        <th>Havayolu</th>
-                        <th>Geliş No</th>
-                        <th>STA</th>
-                        <th>Gidiş No</th>
-                        <th>STD</th>
-                        <th>Park Poz.</th>
-                        <th>FR24 Radar</th>
-                        <th>İşlem / Atanan</th>
+                        <th style="width: 8%;">Hareket</th>
+                        <th style="width: 12%;">Saat</th>
+                        <th style="width: 40%;">Uçuş (Havayolu - Sefer No)</th>
+                        <th style="width: 15%;">Park Poz.</th>
+                        <th style="width: 25%;">İşlem / Atanan</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for ucus in ucuslar %}
                     <tr class="{% if ucus.gece_mi == 1 %}gece-ucus{% endif %} {% if ucus.tamamlandi == 1 %}tamamlandi-satir{% endif %}">
-                        <td><strong>{{ ucus.havayolu }}</strong></td>
-                        <td style="color: #28a745; font-weight: bold;">{{ ucus.gelis_flight }}</td>
-                        <td>{{ ucus.sta }}</td>
-                        <td style="color: #dc3545; font-weight: bold;">{{ ucus.gidis_flight }}</td>
-                        <td>{{ ucus.std }}</td>
-                        <td><span style="background: #ffcc00; color: #003366; padding: 2px 6px; border-radius: 4px; font-weight: bold;">{{ ucus.park_pozisyonu }}</span></td>
+                        <td>
+                            {% if ucus.tip == 'arrival' %}
+                            <span style="font-size: 20px; color: #0056b3;" title="Geliş">🛬</span>
+                            {% else %}
+                            <span style="font-size: 20px; color: #cc9900;" title="Gidiş">🛫</span>
+                            {% endif %}
+                        </td>
+                        
+                        <td><span style="font-size: 16px; font-weight: bold;">{{ ucus.saat }}</span></td>
                         
                         <td>
-                            {% set s_kod = ucus.havayolu.split('/')[0].strip() %}
-                            <a href="https://www.flightradar24.com/data/flights/{{ s_kod }}{{ ucus.gidis_flight if ucus.gidis_flight else ucus.gelis_flight }}" target="_blank" style="background:#003366; color:#ffcc00; padding:3px 6px; border-radius:4px; font-size:11px; font-weight:bold; text-decoration:none;">✈️ FR24</a>
+                            {% if ucus.tip == 'arrival' %}
+                            <span class="flight-arrival">{{ ucus.havayolu }} {{ ucus.flight_no }}</span>
+                            {% else %}
+                            <span class="flight-departure">{{ ucus.havayolu }} {{ ucus.flight_no }}</span>
+                            {% endif %}
                         </td>
+                        
+                        <td><span style="background: #003366; color: white; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 14px;">{{ ucus.park }}</span></td>
                         
                         <td>
                             {% if ucus.tamamlandi == 0 %}
@@ -147,7 +160,7 @@
                             {% else %}
                             <form action="/ucus-geri-al/{{ ucus.id }}" method="POST" style="margin: 0; display: flex; align-items: center; gap: 10px;">
                                 <span class="badge {{ ucus.personel_renk }}">✔️ {{ ucus.personel_ad }}</span>
-                                <button type="submit" style="background:#dc3545; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Geri Al</button>
+                                <button type="submit" style="background:#dc3545; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-weight:bold;">Geri Al</button>
                             </form>
                             {% endif %}
                         </td>
@@ -193,34 +206,19 @@
         function openModal() { document.getElementById("statsModal").style.display = "block"; }
         function closeModal() { document.getElementById("statsModal").style.display = "none"; }
 
-        // ANLIK SENKRONİZASYON MOTORU
         let syncInterval = null;
-
-        // Sayfa açıldığında hafızada yenileme durumu varsa kaldığı yerden devam etsin
         window.onload = function() {
-            if (localStorage.getItem("autoSync") === "true") {
-                startSync();
-            }
+            if (localStorage.getItem("autoSync") === "true") { startSync(); }
         }
-
         function toggleSync() {
-            if (syncInterval) {
-                stopSync();
-            } else {
-                startSync();
-            }
+            if (syncInterval) { stopSync(); } else { startSync(); }
         }
-
         function startSync() {
             localStorage.setItem("autoSync", "true");
             document.getElementById("syncToggle").innerText = "🔄 Anlık Yenileme: AKTİF";
             document.getElementById("syncToggle").classList.add("sync-active");
-            // Her 5 saniyede bir sayfayı arkada sessizce yeniler
-            syncInterval = setInterval(() => {
-                window.location.reload();
-            }, 5000); 
+            syncInterval = setInterval(() => { window.location.reload(); }, 5000); 
         }
-
         function stopSync() {
             localStorage.setItem("autoSync", "false");
             document.getElementById("syncToggle").innerText = "🔄 Anlık Yenileme: KAPALI";
