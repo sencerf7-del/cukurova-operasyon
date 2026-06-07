@@ -69,6 +69,7 @@ def ana_sayfa():
     ucuslar = []
     odak_count = 0
     for u in ucuslar_raw:
+        # STA veya STD zaman aralığındaysa odakla
         is_odak = zaman_aralikta_mi(u['sta'], bas_s, bas_d, bit_s, bit_d) or zaman_aralikta_mi(u['std'], bas_s, bas_d, bit_s, bit_d)
         if is_odak: odak_count += 1
         p_renk = ""
@@ -100,26 +101,59 @@ def excel_yukle():
         df = pd.read_csv(filepath, skiprows=7) if file.filename.endswith('.csv') else pd.read_excel(filepath, skiprows=7)
     except:
         return "Excel okunamadı", 500
+        
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
+    
     for index, row in df.iterrows():
-        if len(row) < 10: continue
-        havayolu = str(row.iloc[0]).strip() if not pd.isna(row.iloc[0]) else ''
-        gelis_flight = str(row.iloc[2]).strip() if not pd.isna(row.iloc[2]) else ''
-        sta = str(row.iloc[3]).strip() if not pd.isna(row.iloc[3]) else ''
-        gidis_flight = str(row.iloc[5]).strip() if not pd.isna(row.iloc[5]) else ''
-        std = str(row.iloc[6]).strip() if not pd.isna(row.iloc[6]) else ''
-        park = str(row.iloc[8]).strip() if not pd.isna(row.iloc[8]) else ''
-        istasyon = str(row.iloc[9]).strip() if not pd.isna(row.iloc[9]) else ''
-        if "AIRLINE" in havayolu or "ARRIVAL" in havayolu or (not gelis_flight and not gidis_flight): continue
-        if gelis_flight.endswith('.0'): gelis_flight = gelis_flight[:-2]
-        if gidis_flight.endswith('.0'): gidis_flight = gidis_flight[:-2]
-        if park.endswith('.0'): park = park[:-2]
-        mevcut = cursor.execute('SELECT id FROM ucuslar WHERE havayolu=? AND gelis_flight=? AND gidis_flight=?', (havayolu, gelis_flight, gidis_flight)).fetchone()
-        if mevcut:
-            cursor.execute('UPDATE ucuslar SET sta=?, std=?, park_pozisyonu=?, istasyon=? WHERE id=?', (sta, std, park, istasyon, mevcut[0]))
-        else:
-            cursor.execute('INSERT INTO ucuslar (havayolu, gelis_flight, sta, gidis_flight, std, park_pozisyonu, istasyon) VALUES (?, ?, ?, ?, ?, ?, ?)', (havayolu, gelis_flight, sta, gidis_flight, std, park, istasyon))
+        if len(row) < 4: continue
+        
+        # --- 1. KISIM: ARRIVAL (GELİŞ) UÇAKLARINI OKUMA ---
+        havayolu_arr = str(row.iloc[0]).strip() if not pd.isna(row.iloc[0]) else ''
+        gelis_no = str(row.iloc[2]).strip() if not pd.isna(row.iloc[2]) else ''
+        sta_saat = str(row.iloc[3]).strip() if not pd.isna(row.iloc[3]) else ''
+        park_arr = str(row.iloc[4]).strip() if len(row) > 4 and not pd.isna(row.iloc[4]) else ''
+        
+        # Başlık satırlarını eliyoruz
+        if "AIRLINE" in havayolu_arr or "ARRIVAL" in havayolu_arr:
+            havayolu_arr = ''
+            
+        # Eğer bir geliş uçağı varsa veritabanına ekle/güncelle
+        if gelis_no and gelis_no != 'nan' and gelis_no != '-':
+            if gelis_no.endswith('.0'): gelis_no = gelis_no[:-2]
+            if park_arr.endswith('.0'): park_arr = park_arr[:-2]
+            
+            mevcut_arr = cursor.execute('SELECT id FROM ucuslar WHERE gelis_flight=?', (gelis_no,)).fetchone()
+            if mevcut_arr:
+                cursor.execute('UPDATE ucuslar SET havayolu=?, sta=?, park_pozisyonu=? WHERE id=?', (havayolu_arr, sta_saat, park_arr, mevcut_arr[0]))
+            else:
+                cursor.execute('INSERT INTO ucuslar (havayolu, gelis_flight, sta, park_pozisyonu, gidis_flight, std, istasyon) VALUES (?, ?, ?, ?, "", "", "")', (havayolu_arr, gelis_no, sta_saat, park_arr))
+
+        # --- 2. KISIM: DEPARTURES (GİDİŞ) UÇAKLARINI OKUMA ---
+        # Excel'deki sütunların sağ tarafına (gidiş kısmına) odaklanıyoruz
+        if len(row) >= 8:
+            havayolu_dep = str(row.iloc[5]).strip() if not pd.isna(row.iloc[5]) else ''
+            gidis_no = str(row.iloc[6]).strip() if not pd.isna(row.iloc[6]) else ''
+            std_saat = str(row.iloc[7]).strip() if not pd.isna(row.iloc[7]) else ''
+            park_dep = str(row.iloc[8]).strip() if len(row) > 8 and not pd.isna(row.iloc[8]) else ''
+            istasyon = str(row.iloc[9]).strip() if len(row) > 9 and not pd.isna(row.iloc[9]) else ''
+            
+            if "AIRLINE" in havayolu_dep or "DEPARTURE" in havayolu_dep:
+                havayolu_dep = ''
+                
+            if gidis_no and gidis_no != 'nan' and gidis_no != '-':
+                if gidis_no.endswith('.0'): gidis_no = gidis_no[:-2]
+                if park_dep.endswith('.0'): park_dep = park_dep[:-2]
+                
+                # Gidiş uçuş numarasına göre kontrol et
+                mevcut_dep = cursor.execute('SELECT id FROM ucuslar WHERE gidis_flight=?', (gidis_no,)).fetchone()
+                if mevcut_dep:
+                    cursor.execute('UPDATE ucuslar SET havayolu=?, std=?, park_pozisyonu=?, istasyon=? WHERE id=?', (havayolu_dep, std_saat, park_dep, istasyon, mevcut_dep[0]))
+                else:
+                    # Bağlantılı uçağı yakalamak için geliş no veya park pozisyonu eşleştirmesi denenebilir,
+                    # Ancak en garantisi gidişi de tek başına bağımsız bir satır olarak listeye eklemektir.
+                    cursor.execute('INSERT INTO ucuslar (havayolu, gelis_flight, sta, park_pozisyonu, gidis_flight, std, istasyon) VALUES (?, "", "", ?, ?, ?, ?)', (havayolu_dep, park_dep, gidis_no, std_saat, istasyon))
+
     conn.commit()
     conn.close()
     return redirect('/')
@@ -138,7 +172,6 @@ def ucus_tamamla(ucus_id):
     p_ad = request.form.get('personel_ad')
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute('UPDATE ucuslar SET tamamlandi = 1, presidential_ad = ?, personel_ad = ? WHERE id = ?', (p_ad, p_ad, ucus_id)) # Geriye uyumluluk guardı ile güvenli güncelleme
     cursor.execute('UPDATE ucuslar SET tamamlandi = 1, personel_ad = ? WHERE id = ?', (p_ad, ucus_id))
     conn.commit()
     conn.close()
