@@ -32,8 +32,9 @@ def veritabanini_kur():
     conn.close()
 
 def saat_temizle(saat_verisi):
-    val = str(saat_verisi).strip()
-    if not val or val == 'nan' or val == '-': return ""
+    val = str(saat_verisi).strip().lower()
+    if not val or val == 'nan' or val == '-' or val == 'nat': return ""
+    # Eğer hücrede tarih ve saat birleşikse (Örn: 2026-06-07 18:35:00) sadece saati cımbızla çek
     if " " in val:
         val = val.split(" ")[-1]
     if ":" in val:
@@ -50,7 +51,8 @@ def zaman_aralikta_mi(saat_str, bas_s, bas_d, bit_s, bit_d):
         h, m = map(int, str(saat_str).split(":"))
         ucus_dk = h * 60 + m
         b_dk, bit_dk = bas_s * 60 + bas_d, bit_s * 60 + bit_d
-        if b_dk > bit_dk: return ucus_dk >= b_dk or ucus_dk < bit_dk
+        if b_dk > bit_dk: 
+            return ucus_dk >= b_dk or ucus_dk < bit_dk
         return b_dk <= ucus_dk < bit_dk
     except: return False
 
@@ -59,6 +61,7 @@ def nobet_sirasi_anahtari(saat_str):
     try:
         h, m = map(int, saat_str.split(":"))
         dakika = h * 60 + m
+        # 17:00'den gece yarısına kadar olanları öne al, 00:00 sonrasını arkasına ekle
         if h >= 17:
             return dakika - (17 * 60)
         else:
@@ -110,12 +113,11 @@ def ana_sayfa():
         for p in personeller:
             if p['ad_soyad'] == u['personel_ad']: p_renk = p['renk']
 
-        # İki harfli temiz havayolu kodunu çekiyoruz (Örn: TK)
         h_kod = str(u['havayolu']).split("/")[0].strip() if u['havayolu'] else ""
-        if h_kod == "nan" or h_kod == "-": h_kod = ""
+        if h_kod.lower() == "nan" or h_kod == "-": h_kod = ""
 
-        # ARRIVALS (GELİŞLER)
-        if u['gelis_flight'] and str(u['gelis_flight']).strip() != '' and str(u['gelis_flight']).strip() != 'nan':
+        # ARRIVALS
+        if u['gelis_flight'] and str(u['gelis_flight']).strip() != '' and str(u['gelis_flight']).strip().lower() != 'nan':
             g_flight = str(u['gelis_flight']).strip()
             if g_flight.endswith('.0'): g_flight = g_flight[:-2]
             
@@ -132,8 +134,8 @@ def ana_sayfa():
                     'personel_renk': p_renk, 'gece_mi': 1 if is_odak else 0
                 })
             
-        # DEPARTURES (GİDİŞLER)
-        if u['gidis_flight'] and str(u['gidis_flight']).strip() != '' and str(u['gidis_flight']).strip() != 'nan':
+        # DEPARTURES
+        if u['gidis_flight'] and str(u['gidis_flight']).strip() != '' and str(u['gidis_flight']).strip().lower() != 'nan':
             gi_flight = str(u['gidis_flight']).strip()
             if gi_flight.endswith('.0'): gi_flight = gi_flight[:-2]
             
@@ -168,7 +170,8 @@ def excel_yukle():
     filepath = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(filepath)
     try:
-        df = pd.read_csv(filepath, skiprows=7) if file.filename.endswith('.csv') else pd.read_excel(filepath, skiprows=7)
+        # Hata payını sıfırlamak için tüm sütunları zorla string (metin) olarak okuyoruz
+        df = pd.read_csv(filepath, skiprows=7, dtype=str) if file.filename.endswith('.csv') else pd.read_excel(filepath, skiprows=7, dtype=str)
     except:
         return "Excel okunamadı", 500
         
@@ -176,34 +179,42 @@ def excel_yukle():
     cursor = conn.cursor()
     
     for index, row in df.iterrows():
-        if len(row) < 4: continue
+        if len(row) < 5: continue
         
         havayolu_arr = str(row.iloc[0]).strip() if not pd.isna(row.iloc[0]) else ''
         gelis_no = str(row.iloc[2]).strip() if not pd.isna(row.iloc[2]) else ''
         sta_saat = str(row.iloc[3]).strip() if not pd.isna(row.iloc[3]) else ''
-        park_poz = str(row.iloc[4]).strip() if len(row) > 4 and not pd.isna(row.iloc[4]) else ''
+        
+        # 🚨 KAPI NUMARASI SÜTUNU (Bridge INT - Sütun 4)
+        park_poz = str(row.iloc[4]).strip() if not pd.isna(row.iloc[4]) else ''
+        if park_poz.lower() == 'nan' or park_poz == '-': park_poz = ""
+        
         istasyon_ham = str(row.iloc[9]).strip() if len(row) > 9 and not pd.isna(row.iloc[9]) else ''
         
-        if "AIRLINE" in havayolu_arr or "ARRIVAL" in havayolu_arr or havayolu_arr == 'nan': 
+        if "AIRLINE" in havayolu_arr or "ARRIVAL" in havayolu_arr or havayolu_arr.lower() == 'nan': 
             continue
             
-        if gelis_no and gelis_no != 'nan' and gelis_no != '-':
+        # Geliş uçağını yaz
+        if gelis_no and gelis_no.lower() != 'nan' and gelis_no != '-':
             if gelis_no.endswith('.0'): gelis_no = gelis_no[:-2]
             if park_poz.endswith('.0'): park_poz = park_poz[:-2]
             
             cursor.execute('INSERT INTO ucuslar (havayolu, gelis_flight, sta, park_pozisyonu, gidis_flight, std, istasyon) VALUES (?, ?, ?, ?, "", "", ?)', 
                            (havayolu_arr, gelis_no, sta_saat, park_poz, istasyon_ham))
 
+        # Gidiş uçağını yaz
         if len(row) >= 8:
             gidis_no = str(row.iloc[6]).strip() if not pd.isna(row.iloc[6]) else ''
             std_saat = str(row.iloc[7]).strip() if not pd.isna(row.iloc[7]) else ''
-            park_dep = str(row.iloc[8]).strip() if len(row) > 8 and not pd.isna(row.iloc[8]) else park_poz
             
-            if gidis_no and gidis_no != 'nan' and gidis_no != '-':
+            # Gidiş park yeri hücresi boşsa sol taraftaki park yerini devral
+            park_dep = str(row.iloc[8]).strip() if len(row) > 8 and not pd.isna(row.iloc[8]) else park_poz
+            if park_dep.lower() == 'nan' or park_dep == '-': park_dep = park_poz
+            if park_dep.endswith('.0'): park_dep = park_dep[:-2]
+            
+            if gidis_no and gidis_no.lower() != 'nan' and gidis_no != '-':
                 if gidis_no.endswith('.0'): gidis_no = gidis_no[:-2]
-                if park_dep.endswith('.0'): park_dep = park_dep[:-2]
                 
-                # 🎯 KANKANIN İSTEDİĞİ GİDİŞ İÇİN MUTLAK KOD ATAMASI
                 cursor.execute('INSERT INTO ucuslar (havayolu, gelis_flight, sta, park_pozisyonu, gidis_flight, std, istasyon) VALUES (?, "", "", ?, ?, ?, ?)', 
                                (havayolu_arr, park_dep, gidis_no, std_saat, istasyon_ham))
 
