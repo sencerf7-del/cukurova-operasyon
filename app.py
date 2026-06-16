@@ -14,6 +14,7 @@ RENK_SIRALAMASI = ["pers-mavi", "pers-kirmizi", "pers-yesil", "pers-sari", "pers
 def veritabanini_kur():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
+    # Tabloya revizyon takibi için degisti_saat ve degisti_park sütunlarını ekledik
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS ucuslar (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -25,7 +26,9 @@ def veritabanini_kur():
             park_pozisyonu TEXT,
             istasyon TEXT,
             tamamlandi INTEGER DEFAULT 0,
-            personel_ad TEXT DEFAULT ''
+            personel_ad TEXT DEFAULT '',
+            degisti_saat INTEGER DEFAULT 0,
+            degisti_park INTEGER DEFAULT 0
         )
     ''')
     conn.commit()
@@ -94,14 +97,12 @@ def ana_sayfa():
     for idx, isim in enumerate(SABIT_EKIP):
         personeller.append({'ad_soyad': isim, 'renk': RENK_SIRALAMASI[idx]})
         
-    perf = {isim: {'gunluk': 0, 'haftalik': 0, 'aylik': 0, 'tumu': 0} for isim in SABIT_EKIP}
+    # Sadece Günlük Performans istatistiği tutuluyor kanka
+    perf = {isim: 0 for isim in SABIT_EKIP}
     for u in ucuslar_raw:
         p_ad = u['personel_ad']
         if u['tamamlandi'] == 1 and p_ad in perf:
-            perf[p_ad]['gunluk'] += 1
-            perf[p_ad]['haftalik'] += 1
-            perf[p_ad]['aylik'] += 1
-            perf[p_ad]['tumu'] += 1
+            perf[p_ad] += 1
 
     duzenli_liste = []
     odak_count = 0
@@ -129,7 +130,8 @@ def ana_sayfa():
                     'saat': cleaned_sta, 'tip': 'arrival', 'park': u['park_pozisyonu'],
                     'meydan': istasyon_ayir(u['istasyon'], 'arrival'),
                     'tamamlandi': u['tamamlandi'], 'personel_ad': u['personel_ad'], 
-                    'personel_renk': p_renk, 'gece_mi': 1 if is_odak else 0
+                    'personel_renk': p_renk, 'gece_mi': 1 if is_odak else 0,
+                    'revize_mi': 1 if (u['degisti_saat'] == 1 or u['degisti_park'] == 1) else 0
                 })
             
         # DEPARTURES
@@ -147,7 +149,8 @@ def ana_sayfa():
                     'saat': cleaned_std, 'tip': 'departure', 'park': u['park_pozisyonu'],
                     'meydan': istasyon_ayir(u['istasyon'], 'departure'),
                     'tamamlandi': u['tamamlandi'], 'personel_ad': u['personel_ad'], 
-                    'personel_renk': p_renk, 'gece_mi': 1 if is_odak else 0
+                    'personel_renk': p_renk, 'gece_mi': 1 if is_odak else 0,
+                    'revize_mi': 1 if (u['degisti_saat'] == 1 or u['degisti_park'] == 1) else 0
                 })
 
     duzenli_liste = sorted(duzenli_liste, key=lambda x: nobet_sirasi_anahtari(x['saat']))
@@ -181,25 +184,30 @@ def excel_yukle():
         havayolu_arr = str(row.iloc[0]).strip() if not pd.isna(row.iloc[0]) else ''
         gelis_no = str(row.iloc[2]).strip() if not pd.isna(row.iloc[2]) else ''
         sta_saat = str(row.iloc[3]).strip() if not pd.isna(row.iloc[3]) else ''
-        
-        # 🚨 DOĞRU PARK POZİSYONU SÜTUNU (Bridge INT -> Sütun 8) kanka!
         park_poz = str(row.iloc[8]).strip() if not pd.isna(row.iloc[8]) else ''
         if park_poz.lower() == 'nan' or park_poz == '-': park_poz = ""
-        
         istasyon_ham = str(row.iloc[9]).strip() if len(row) > 9 and not pd.isna(row.iloc[9]) else ''
         
         if "AIRLINE" in havayolu_arr or "ARRIVAL" in havayolu_arr or havayolu_arr.lower() == 'nan': 
             continue
             
-        # Geliş uçağını yaz
+        # ARRIVALS İÇİN GÜNCELLEME VE REVİZYON KONTROLÜ
         if gelis_no and gelis_no.lower() != 'nan' and gelis_no != '-':
             if gelis_no.endswith('.0'): gelis_no = gelis_no[:-2]
             if park_poz.endswith('.0'): park_poz = park_poz[:-2]
             
-            cursor.execute('INSERT INTO ucuslar (havayolu, gelis_flight, sta, park_pozisyonu, gidis_flight, std, istasyon) VALUES (?, ?, ?, ?, "", "", ?)', 
-                           (havayolu_arr, gelis_no, sta_saat, park_poz, istasyon_ham))
+            mevcut = cursor.execute('SELECT id, sta, park_pozisyonu FROM ucuslar WHERE gelis_flight=?', (gelis_no,)).fetchone()
+            if mevcut:
+                # Saat veya park yeri değiştiyse bayrakları kaldır kanka (Açık Kırmızı Arka Plan İçin)
+                deg_saat = 1 if mevcut[1] != sta_saat else 0
+                deg_park = 1 if mevcut[2] != park_poz else 0
+                cursor.execute('UPDATE ucuslar SET havayolu=?, sta=?, park_pozisyonu=?, istasyon=?, degisti_saat=?, degisti_park=? WHERE id=?', 
+                               (havayolu_arr, sta_saat, park_poz, istasyon_ham, deg_saat, deg_park, mevcut[0]))
+            else:
+                cursor.execute('INSERT INTO ucuslar (havayolu, gelis_flight, sta, park_pozisyonu, gidis_flight, std, istasyon) VALUES (?, ?, ?, ?, "", "", ?)', 
+                               (havayolu_arr, gelis_no, sta_saat, park_poz, istasyon_ham))
 
-        # Gidiş uçağını yaz
+        # DEPARTURES İÇİN GÜNCELLEME VE REVİZYON KONTROLÜ
         gidis_no = str(row.iloc[5]).strip() if not pd.isna(row.iloc[5]) else ''
         std_saat = str(row.iloc[6]).strip() if not pd.isna(row.iloc[6]) else ''
         
@@ -207,8 +215,15 @@ def excel_yukle():
             if gidis_no.endswith('.0'): gidis_no = gidis_no[:-2]
             if park_poz.endswith('.0'): park_poz = park_poz[:-2]
             
-            cursor.execute('INSERT INTO ucuslar (havayolu, gelis_flight, sta, park_pozisyonu, gidis_flight, std, istasyon) VALUES (?, "", "", ?, ?, ?, ?)', 
-                           (havayolu_arr, park_poz, gidis_no, std_saat, istasyon_ham))
+            mevcut_gidis = cursor.execute('SELECT id, std, park_pozisyonu FROM ucuslar WHERE gidis_flight=?', (gidis_no,)).fetchone()
+            if mevcut_gidis:
+                deg_saat = 1 if mevcut_gidis[1] != std_saat else 0
+                deg_park = 1 if mevcut_gidis[2] != park_poz else 0
+                cursor.execute('UPDATE ucuslar SET havayolu=?, std=?, park_pozisyonu=?, istasyon=?, degisti_saat=?, degisti_park=? WHERE id=?', 
+                               (havayolu_arr, std_saat, park_poz, istasyon_ham, deg_saat, deg_park, mevcut_gidis[0]))
+            else:
+                cursor.execute('INSERT INTO ucuslar (havayolu, gelis_flight, sta, park_pozisyonu, gidis_flight, std, istasyon) VALUES (?, "", "", ?, ?, ?, ?)', 
+                               (havayolu_arr, park_poz, gidis_no, std_saat, istasyon_ham))
 
     conn.commit()
     conn.close()
