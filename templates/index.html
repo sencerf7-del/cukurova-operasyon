@@ -20,10 +20,7 @@
         .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; display: inline-block; }
         
         .gece-ucus { background-color: #e8effa !important; border-left: 5px solid #003366; }
-        
-        /* 🚨 REVIZE EDİLEN (SAATİ/KAPISI DEĞİŞEN) UÇUŞLAR İÇİN AÇIK KIRMIZI TON */
         .revize-satir { background-color: #fceade !important; border-left: 5px solid #e63946 !important; }
-        
         .tamamlandi-satir { opacity: 0.30; background-color: #e9ecef !important; border-left: none !important; }
         
         .flight-arrival { color: #0040ff; font-weight: bold; font-size: 16px; }
@@ -46,7 +43,6 @@
         .sync-active::after { content: "●"; color: #fff; margin-left: 5px; animation: blink 1s infinite; }
         @keyframes blink { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
         
-        /* 📋 SİDEBAR PERFORMANS TABLO STİLİ */
         .perf-table { width: 100%; margin-top: 10px; font-size: 14px; border-collapse: collapse; }
         .perf-table td { padding: 8px; border-bottom: 1px solid #eee; }
         .perf-count { font-weight: bold; background-color: #003366; color: white; padding: 2px 8px; border-radius: 10px; float: right; }
@@ -63,12 +59,12 @@
 
     <div style="background: #e6f0fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
         <strong style="color: #003366;">⏱️ Gece Nöbeti / Odak Zaman Aralığı Seçimi:</strong>
-        <form method="GET" action="/" style="display: flex; align-items: center; gap: 8px; margin: 0;">
-            <select name="bas_s" style="width: 65px;">{% for h in range(24) %}<option value="{{ h }}" {% if bas_s == h %}selected{% endif %}>{{ "%02d"|format(h) }}</option>{% endfor %}</select>:
-            <select name="bas_d" style="width: 65px;">{% for m in range(0, 60, 5) %}<option value="{{ m }}" {% if bas_d == m %}selected{% endif %}>{{ "%02d"|format(m) }}</option>{% endfor %}</select>
+        <form id="timeForm" method="GET" action="/" style="display: flex; align-items: center; gap: 8px; margin: 0;">
+            <select name="bas_s" id="bas_s" onchange="saveTimeSettings()">{% for h in range(24) %}<option value="{{ h }}" {% if bas_s == h %}selected{% endif %}>{{ "%02d"|format(h) }}</option>{% endfor %}</select>:
+            <select name="bas_d" id="bas_d" onchange="saveTimeSettings()">{% for m in range(0, 60, 5) %}<option value="{{ m }}" {% if bas_d == m %}selected{% endif %}>{{ "%02d"|format(m) }}</option>{% endfor %}</select>
             <span>-</span>
-            <select name="bit_s" style="width: 65px;">{% for h in range(24) %}<option value="{{ h }}" {% if bit_s == h %}selected{% endif %}>{{ "%02d"|format(h) }}</option>{% endfor %}</select>:
-            <select name="bit_d" style="width: 65px;">{% for m in range(0, 60, 5) %}<option value="{{ m }}" {% if bit_d == m %}selected{% endif %}>{{ "%02d"|format(m) }}</option>{% endfor %}</select>
+            <select name="bit_s" id="bit_s" onchange="saveTimeSettings()">{% for h in range(24) %}<option value="{{ h }}" {% if bit_s == h %}selected{% endif %}>{{ "%02d"|format(h) }}</option>{% endfor %}</select>:
+            <select name="bit_d" id="bit_d" onchange="saveTimeSettings()">{% for m in range(0, 60, 5) %}<option value="{{ m }}" {% if bit_d == m %}selected{% endif %}>{{ "%02d"|format(m) }}</option>{% endfor %}</select>
             <button type="submit" class="btn" style="padding: 5px 10px;">Uygula</button>
         </form>
     </div>
@@ -92,7 +88,7 @@
                 <div style="padding: 8px; border-radius: 4px; font-weight: bold; font-size: 14px;" class="pers-yesil">• SERHAT</div>
                 <div style="padding: 8px; border-radius: 4px; font-weight: bold; font-size: 14px;" class="pers-sari">• MELİH</div>
                 <div style="padding: 8px; border-radius: 4px; font-weight: bold; font-size: 14px;" class="pers-turkuaz">• TAHA</div>
-                <div style="padding: 8px; border-radius: 4px; font-weight: bold; font-size: 14px;" class="pers-mor">• ZEYNEP</div>
+                <div style="padding: 10px; border-radius: 4px; font-weight: bold; font-size: 14px;" class="pers-mor">• ZEYNEP</div>
             </div>
 
             <h3 style="margin-top: 30px; border-top: 2px solid #003366; padding-top: 15px;">🔥 Günlük Performans</h3>
@@ -119,18 +115,17 @@
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 30%;">Uçuş (Havayolu + Sefer No)</th>
-                        <th style="width: 12%;">Saat</th>
-                        <th style="width: 12%;">Kapı</th>
-                        <th style="width: 13%;">Meydan</th>
-                        <th style="width: 15%;">Radar</th>
-                        <th style="width: 18%;">İşlem / Atanan</th>
+                        <th style="width: 32%;">Uçuş (Havayolu + Sefer No)</th>
+                        <th style="width: 14%;">Saat (STA/STD)</th>
+                        <th style="width: 14%;">Kapı (Park)</th>
+                        <th style="width: 12%;">Meydan</th>
+                        <th style="width: 13%;">Radar</th>
+                        <th style="width: 15%;">İşlem / Atanan</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for ucus in ucuslar %}
                     <tr class="{% if ucus.revize_mi == 1 %}revize-satir{% elif ucus.gece_mi == 1 %}gece-ucus{% endif %} {% if ucus.tamamlandi == 1 %}tamamlandi-satir{% endif %}">
-                        
                         <td>
                             {% if ucus.tip == 'arrival' %}
                             <span class="flight-arrival">🛬 {{ ucus.havayolu_kod }}{{ ucus.flight_no }}</span>
@@ -138,9 +133,7 @@
                             <span class="flight-departure">🛫 {{ ucus.havayolu_kod }}{{ ucus.flight_no }}</span>
                             {% endif %}
                         </td>
-                        
                         <td><span style="font-size: 16px; font-weight: bold;">{{ ucus.saat }}</span></td>
-                        
                         <td>
                             {% if ucus.park %}
                             <span style="background: #003366; color: white; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 14px;">{{ ucus.park }}</span>
@@ -148,15 +141,12 @@
                             <span style="color: #bbb; font-style: italic;">Açık Poz.</span>
                             {% endif %}
                         </td>
-                        
                         <td><strong style="color: #555;">{{ ucus.meydan }}</strong></td>
-                        
                         <td>
                             <a href="https://www.flightradar24.com/data/flights/{{ ucus.havayolu_kod }}{{ ucus.flight_no }}" target="_blank" class="fr24-btn">
                                 ✈️ FR24
                             </a>
                         </td>
-                        
                         <td>
                             {% if ucus.tamamlandi == 0 %}
                             <form action="/ucus-tamamla/{{ ucus.id }}" method="POST" style="display: flex; gap: 3px; margin: 0;">
@@ -187,18 +177,55 @@
 
     <script>
         let syncInterval = null;
+
+        // Sayfa yüklendiğinde hafızadaki saatleri ve yenileme durumunu kontrol et kanka
         window.onload = function() {
+            // Eğer URL'de parametre yoksa ve hafızada kayıtlı saat varsa otomatik o saatlere yönlendir
+            const urlParams = new URLSearchParams(window.location.search);
+            if (!urlParams.has('bas_s') && localStorage.getItem('bas_s') !== null) {
+                applySavedTime();
+                return;
+            }
+
             if (localStorage.getItem("autoSync") === "true") { startSync(); }
         }
+
+        // Seçilen saatleri tarayıcı hafızasına yazan fonksiyon
+        function saveTimeSettings() {
+            localStorage.setItem('bas_s', document.getElementById('bas_s').value);
+            localStorage.setItem('bas_d', document.getElementById('bas_d').value);
+            localStorage.setItem('bit_s', document.getElementById('bit_s').value);
+            localStorage.setItem('bit_d', document.getElementById('bit_d').value);
+        }
+
+        // Hafızadaki saat ayarlarını linke otomatik giydiren fonksiyon
+        function applySavedTime() {
+            const bs = localStorage.getItem('bas_s') || 17;
+            const bd = localStorage.getItem('bas_d') || 0;
+            const bts = localStorage.getItem('bit_s') || 9;
+            const btd = localStorage.getItem('bit_d') || 0;
+            window.location.href = `/?bas_s=${bs}&bas_d=${bd}&bit_s=${bts}&bit_d=${btd}`;
+        }
+
         function toggleSync() {
             if (syncInterval) { stopSync(); } else { startSync(); }
         }
+
         function startSync() {
             localStorage.setItem("autoSync", "true");
             document.getElementById("syncToggle").innerText = "🔄 Anlık Yenileme: AKTİF";
             document.getElementById("syncToggle").classList.add("sync-active");
-            syncInterval = setInterval(() => { window.location.reload(); }, 5000); 
+            
+            // Yenilerken mevcut saat kısıtlamalarını koruyarak sayfayı t tazeler kanka
+            syncInterval = setInterval(() => {
+                const bs = document.getElementById('bas_s').value;
+                const bd = document.getElementById('bas_d').value;
+                const bts = document.getElementById('bit_s').value;
+                const btd = document.getElementById('bit_d').value;
+                window.location.href = `/?bas_s=${bs}&bas_d=${bd}&bit_s=${bts}&bit_d=${btd}`;
+            }, 5000); 
         }
+
         function stopSync() {
             localStorage.setItem("autoSync", "false");
             document.getElementById("syncToggle").innerText = "🔄 Anlık Yenileme: KAPALI";
