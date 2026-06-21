@@ -1,38 +1,20 @@
 from flask import Flask, render_template, request, redirect
-import sqlite3
 import pandas as pd
 import os
+from supabase import create_client, Client
 
 app = Flask(__name__)
-DB_NAME = "havalimanı_operasyon.db"
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 SABIT_EKIP = ["ŞAHİN", "SENCER", "SERHAT", "MELİH", "TAHA", "ZEYNEP"]
 RENK_SIRALAMASI = ["pers-mavi", "pers-kirmizi", "pers-yesil", "pers-sari", "pers-turkuaz", "pers-mor"]
 
-def veritabanini_kur():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    # Tabloya revizyon takibi için degisti_saat ve degisti_park sütunlarını ekledik
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS ucuslar (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            havayolu TEXT,
-            gelis_flight TEXT,
-            sta TEXT,
-            gidis_flight TEXT,
-            std TEXT,
-            park_pozisyonu TEXT,
-            istasyon TEXT,
-            tamamlandi INTEGER DEFAULT 0,
-            personel_ad TEXT DEFAULT '',
-            degisti_saat INTEGER DEFAULT 0,
-            degisti_park INTEGER DEFAULT 0
-        )
-    ''')
-    conn.commit()
-    conn.close()
+# 🎯 GÖNDERDİĞİN SUPABASE BİLGİLERİNİ BURAYA İŞLEDİM KANKA
+SUPABASE_URL = "https://y4wsofx8nd1hw3slnndr.supabase.co"
+SUPABASE_KEY = "sb_publishable_y4WSofx8ND1hW3sLNNdR2w_ARuMCuHJ"
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def saat_temizle(saat_verisi):
     val = str(saat_verisi).strip().lower()
@@ -88,16 +70,14 @@ def ana_sayfa():
     bit_s = int(request.args.get('bit_s', 9))
     bit_d = int(request.args.get('bit_d', 0))
 
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    ucuslar_raw = cursor.execute('SELECT * FROM ucuslar').fetchall()
+    # Verileri buluttan çekiyoruz kanka
+    response = supabase.table("ucuslar").select("*").execute()
+    ucuslar_raw = response.data
     
     personeller = []
     for idx, isim in enumerate(SABIT_EKIP):
         personeller.append({'ad_soyad': isim, 'renk': RENK_SIRALAMASI[idx]})
         
-    # Sadece Günlük Performans istatistiği tutuluyor kanka
     perf = {isim: 0 for isim in SABIT_EKIP}
     for u in ucuslar_raw:
         p_ad = u['personel_ad']
@@ -154,10 +134,8 @@ def ana_sayfa():
                 })
 
     duzenli_liste = sorted(duzenli_liste, key=lambda x: nobet_sirasi_anahtari(x['saat']))
-
     toplam_ucus = len(duzenli_liste)
     tamamlanan = len([u for u in duzenli_liste if u['tamamlandi'] == 1])
-    conn.close()
     
     return render_template('index.html', ucuslar=duzenli_liste, personeller=personeller, 
                            toplam_ucus=toplam_ucus, gece_ucus=odak_count, tamamlanan_ucus=tamamlanan,
@@ -174,9 +152,6 @@ def excel_yukle():
         df = pd.read_csv(filepath, skiprows=7, dtype=str) if file.filename.endswith('.csv') else pd.read_excel(filepath, skiprows=7, dtype=str)
     except:
         return "Excel okunamadı", 500
-        
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
     
     for index, row in df.iterrows():
         if len(row) < 9: continue
@@ -191,23 +166,26 @@ def excel_yukle():
         if "AIRLINE" in havayolu_arr or "ARRIVAL" in havayolu_arr or havayolu_arr.lower() == 'nan': 
             continue
             
-        # ARRIVALS İÇİN GÜNCELLEME VE REVİZYON KONTROLÜ
+        # ARRIVALS BULUT REVİZYON KONTROLÜ
         if gelis_no and gelis_no.lower() != 'nan' and gelis_no != '-':
             if gelis_no.endswith('.0'): gelis_no = gelis_no[:-2]
             if park_poz.endswith('.0'): park_poz = park_poz[:-2]
             
-            mevcut = cursor.execute('SELECT id, sta, park_pozisyonu FROM ucuslar WHERE gelis_flight=?', (gelis_no,)).fetchone()
+            mevcut = supabase.table("ucuslar").select("*").eq("gelis_flight", gelis_no).execute().data
             if mevcut:
-                # Saat veya park yeri değiştiyse bayrakları kaldır kanka (Açık Kırmızı Arka Plan İçin)
-                deg_saat = 1 if mevcut[1] != sta_saat else 0
-                deg_park = 1 if mevcut[2] != park_poz else 0
-                cursor.execute('UPDATE ucuslar SET havayolu=?, sta=?, park_pozisyonu=?, istasyon=?, degisti_saat=?, degisti_park=? WHERE id=?', 
-                               (havayolu_arr, sta_saat, park_poz, istasyon_ham, deg_saat, deg_park, mevcut[0]))
+                deg_saat = 1 if mevcut[0]['sta'] != sta_saat else 0
+                deg_park = 1 if mevcut[0]['park_pozisyonu'] != park_poz else 0
+                supabase.table("ucuslar").update({
+                    "havayolu": havayolu_arr, "sta": sta_saat, "park_pozisyonu": park_poz, 
+                    "istasyon": istasyon_ham, "degisti_saat": deg_saat, "degisti_park": deg_park
+                }).eq("id", mevcut[0]['id']).execute()
             else:
-                cursor.execute('INSERT INTO ucuslar (havayolu, gelis_flight, sta, park_pozisyonu, gidis_flight, std, istasyon) VALUES (?, ?, ?, ?, "", "", ?)', 
-                               (havayolu_arr, gelis_no, sta_saat, park_poz, istasyon_ham))
+                supabase.table("ucuslar").insert({
+                    "havayolu": havayolu_arr, "gelis_flight": gelis_no, "sta": sta_saat, 
+                    "park_pozisyonu": park_poz, "istasyon": istasyon_ham
+                }).execute()
 
-        # DEPARTURES İÇİN GÜNCELLEME VE REVİZYON KONTROLÜ
+        # DEPARTURES BULUT REVİZYON KONTROLÜ
         gidis_no = str(row.iloc[5]).strip() if not pd.isna(row.iloc[5]) else ''
         std_saat = str(row.iloc[6]).strip() if not pd.isna(row.iloc[6]) else ''
         
@@ -215,50 +193,37 @@ def excel_yukle():
             if gidis_no.endswith('.0'): gidis_no = gidis_no[:-2]
             if park_poz.endswith('.0'): park_poz = park_poz[:-2]
             
-            mevcut_gidis = cursor.execute('SELECT id, std, park_pozisyonu FROM ucuslar WHERE gidis_flight=?', (gidis_no,)).fetchone()
+            mevcut_gidis = supabase.table("ucuslar").select("*").eq("gidis_flight", gidis_no).execute().data
             if mevcut_gidis:
-                deg_saat = 1 if mevcut_gidis[1] != std_saat else 0
-                deg_park = 1 if mevcut_gidis[2] != park_poz else 0
-                cursor.execute('UPDATE ucuslar SET havayolu=?, std=?, park_pozisyonu=?, istasyon=?, degisti_saat=?, degisti_park=? WHERE id=?', 
-                               (havayolu_arr, std_saat, park_poz, istasyon_ham, deg_saat, deg_park, mevcut_gidis[0]))
+                deg_saat = 1 if mevcut_gidis[0]['std'] != std_saat else 0
+                deg_park = 1 if mevcut_gidis[0]['park_pozisyonu'] != park_poz else 0
+                supabase.table("ucuslar").update({
+                    "havayolu": havayolu_arr, "std": std_saat, "park_pozisyonu": park_poz, 
+                    "istasyon": istasyon_ham, "degisti_saat": deg_saat, "degisti_park": deg_park
+                }).eq("id", mevcut_gidis[0]['id']).execute()
             else:
-                cursor.execute('INSERT INTO ucuslar (havayolu, gelis_flight, sta, park_pozisyonu, gidis_flight, std, istasyon) VALUES (?, "", "", ?, ?, ?, ?)', 
-                               (havayolu_arr, park_poz, gidis_no, std_saat, istasyon_ham))
+                supabase.table("ucuslar").insert({
+                    "havayolu": havayolu_arr, "gidis_flight": gidis_no, "std": std_saat, 
+                    "park_pozisyonu": park_poz, "istasyon": istasyon_ham
+                }).execute()
 
-    conn.commit()
-    conn.close()
     return redirect('/')
 
 @app.route('/sistemi-sifirla', methods=['POST'])
 def sistemi_sifirla():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute('DELETE FROM ucuslar')
-    conn.commit()
-    conn.close()
+    supabase.table("ucuslar").delete().neq("id", 0).execute() # Bulutu temizler
     return redirect('/')
 
 @app.route('/ucus-tamamla/<int:ucus_id>', methods=['POST'])
 def ucus_tamamla(ucus_id):
     p_ad = request.form.get('personel_ad')
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute('UPDATE ucuslar SET tamamlandi = 1, personel_ad = ? WHERE id = ?', (p_ad, ucus_id))
-    conn.commit()
-    conn.close()
+    supabase.table("ucuslar").update({"tamamlandi": 1, "personel_ad": p_ad}).eq("id", ucus_id).execute()
     return redirect('/')
 
 @app.route('/ucus-geri-al/<int:ucus_id>', methods=['POST'])
 def ucus_geri_al(ucus_id):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute('UPDATE ucuslar SET tamamlandi = 0, personel_ad = "" WHERE id = ?', (ucus_id,))
-    conn.commit()
-    conn.close()
+    supabase.table("ucuslar").update({"tamamlandi": 0, "personel_ad": ""}).eq("id", ucus_id).execute()
     return redirect('/')
 
 if __name__ == '__main__':
-    if not os.path.exists(DB_NAME):
-        open(DB_NAME, 'w').close()
-    veritabanini_kur()
     app.run(host='0.0.0.0', port=5000, debug=False)
