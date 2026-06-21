@@ -10,9 +10,9 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 SABIT_EKIP = ["ŞAHİN", "SENCER", "SERHAT", "MELİH", "TAHA", "ZEYNEP"]
 RENK_SIRALAMASI = ["pers-mavi", "pers-kirmizi", "pers-yesil", "pers-sari", "pers-turkuaz", "pers-mor"]
 
-# 🎯 GÖNDERDİĞİN SUPABASE BİLGİLERİNİ BURAYA İŞLEDİM KANKA
+# 🎯 BURADAKİ TIRNAKLARIN İÇİNE SUPABASE'DEKİ O YEŞİL BUTONDAN KOPYALADIĞIN UZUN ŞİFREYİ YAPIŞTIR KANKA
 SUPABASE_URL = "https://y4wsofx8nd1hw3slnndr.supabase.co"
-SUPABASE_KEY = "sb_publishable_y4WSofx8ND1hW3sLNNdR2w_ARuMCuHJ"
+SUPABASE_KEY = "BURAYA_KOPYALADIGIN_UZUN_ANON_PUBLIC_SIFREYI_YAPISTIR"
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -70,9 +70,11 @@ def ana_sayfa():
     bit_s = int(request.args.get('bit_s', 9))
     bit_d = int(request.args.get('bit_d', 0))
 
-    # Verileri buluttan çekiyoruz kanka
-    response = supabase.table("ucuslar").select("*").execute()
-    ucuslar_raw = response.data
+    try:
+        response = supabase.table("ucuslar").select("*").execute()
+        ucuslar_raw = response.data
+    except Exception as e:
+        return f"Supabase Baglanti Hatasi: {str(e)}", 500
     
     personeller = []
     for idx, isim in enumerate(SABIT_EKIP):
@@ -211,7 +213,7 @@ def excel_yukle():
 
 @app.route('/sistemi-sifirla', methods=['POST'])
 def sistemi_sifirla():
-    supabase.table("ucuslar").delete().neq("id", 0).execute() # Bulutu temizler
+    supabase.table("ucuslar").delete().neq("id", 0).execute() 
     return redirect('/')
 
 @app.route('/ucus-tamamla/<int:ucus_id>', methods=['POST'])
