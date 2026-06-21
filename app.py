@@ -11,7 +11,7 @@ SABIT_EKIP = ["ŞAHİN", "SENCER", "SERHAT", "MELİH", "TAHA", "ZEYNEP"]
 RENK_SIRALAMASI = ["pers-mavi", "pers-kirmizi", "pers-yesil", "pers-sari", "pers-turkuaz", "pers-mor"]
 
 # 🎯 BURADAKİ TIRNAKLARIN İÇİNE SUPABASE'DEKİ O YEŞİL BUTONDAN KOPYALADIĞIN UZUN ŞİFREYİ YAPIŞTIR KANKA
-SUPABASE_URL = "https://y4wsofx8nd1hw3slnndr.supabase.co"
+SUPABASE_URL = "https://y4wsofx8nd1hw3slnndr.supabase.com"
 SUPABASE_KEY = "BURAYA_KOPYALADIGIN_UZUN_ANON_PUBLIC_SIFREYI_YAPISTIR"
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
