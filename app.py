@@ -4,7 +4,7 @@ import pandas as pd
 import os
 
 app = Flask(__name__)
-app.secret_key = "cukurova_gizli_anahtar_apron" # Oturum güvenliği için şart kanka
+app.secret_key = os.environ.get("SECRET_KEY", "cukurova_gizli_anahtar_apron")
 DB_NAME = "havalimanı_operasyon.db"
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -12,9 +12,8 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 SABIT_EKIP = ["ŞAHİN", "SENCER", "SERHAT", "MELİH", "TAHA", "ZEYNEP"]
 RENK_SIRALAMASI = ["pers-mavi", "pers-kirmizi", "pers-yesil", "pers-sari", "pers-turkuaz", "pers-mor"]
 
-# 🔐 GİRİŞ ŞİFRELERİ (Buradan değiştirebilirsin kanka)
+# 🔐 GİZLİ ADMİN ŞİFRESİ
 ADMIN_PASSWORD = "admin123"
-USER_PASSWORD = "cukurova2026"
 
 def veritabanini_kur():
     conn = sqlite3.connect(DB_NAME)
@@ -85,31 +84,12 @@ def istasyon_ayir(ist_str, tip):
             return parcalar[1].strip()
     return val
 
-# 🔑 GİRİŞ SAYFASI
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        sifre = request.form.get('sifre')
-        if sifre == ADMIN_PASSWORD:
-            session['rol'] = 'admin'
-            return redirect('/')
-        elif sifre == USER_PASSWORD:
-            session['rol'] = 'user'
-            return redirect('/')
-        else:
-            return render_template('login.html', hata="Hatalı Şifre Girdiniz!")
-    return render_template('login.html')
-
-# 🚪 ÇIKIŞ SİSTEMİ
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect('/login')
-
+# 🚪 ANA SAYFA (ŞİFRESİZ - HERKES GÖREBİLİR KANKA)
 @app.route('/')
 def ana_sayfa():
+    # Giriş yapmayan herkes otomatik 'user' (kullanıcı) rolündedir kanka
     if 'rol' not in session:
-        return redirect('/login')
+        session['rol'] = 'user'
         
     bas_s = int(request.args.get('bas_s', 17))
     bas_d = int(request.args.get('bas_d', 0))
@@ -166,7 +146,11 @@ def ana_sayfa():
             gi_flight = str(u['gidis_flight']).strip()
             if gi_flight.endswith('.0'): gi_flight = gi_flight[:-2]
             
-            cleaned_std = saat_temizle(u['std'])
+            cleaned_std = str(u['std']).strip() if u['std'] else ""
+            if ":" not in cleaned_std and u['sta']:
+                cleaned_std = u['sta']
+            cleaned_std = saat_temizle(cleaned_std)
+            
             if cleaned_std:
                 is_odak = zaman_aralikta_mi(cleaned_std, bas_s, bas_d, bit_s, bit_d)
                 if is_odak: odak_count += 1
@@ -189,9 +173,27 @@ def ana_sayfa():
                            toplam_ucus=toplam_ucus, gece_ucus=odak_count, tamamlanan_ucus=tamamlanan,
                            perf=perf, bas_s=bas_s, bas_d=bas_d, bit_s=bit_s, bit_d=bit_d, rol=session.get('rol'))
 
+# 🔑 GİZLİ ADMİN GİRİŞ SAYFASI ROUTE'U
+@app.route('/admin-panel', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        sifre = request.form.get('sifre')
+        if sifre == ADMIN_PASSWORD:
+            session['rol'] = 'admin'
+            return redirect('/')
+        else:
+            return render_template('login.html', hata="Hatalı Admin Şifresi!")
+    return render_template('login.html')
+
+# 🚪 YETKİDEN ÇIKIŞ (NORMAL KULLANICIYA DÖNME)
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect('/')
+
 @app.route('/excel-yukle', methods=['POST'])
 def excel_yukle():
-    if session.get('rol') != 'admin': return "Yetkisiz İşlem", 403
+    if session.get('rol') != 'admin': return "Yetkisiz İşlem kanka!", 403
     if 'excel_file' not in request.files: return redirect('/')
     file = request.files['excel_file']
     if file.filename == '': return redirect('/')
@@ -255,7 +257,7 @@ def excel_yukle():
 
 @app.route('/sistemi-sifirla', methods=['POST'])
 def sistemi_sifirla():
-    if session.get('rol') != 'admin': return "Yetkisiz İşlem", 403
+    if session.get('rol') != 'admin': return "Yetkisiz İşlem kanka!", 403
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute('DELETE FROM ucuslar')
