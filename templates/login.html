@@ -10,8 +10,13 @@
         h3 { color: #555; margin-top: 0; font-size: 14px; margin-bottom: 25px; }
         input[type="password"] { width: 100%; padding: 12px; margin: 15px 0; border: 2px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; text-align: center; }
         input[type="password"]:focus { border-color: #003366; outline: none; }
-        .btn-submit { background-color: #003366; color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; transition: background 0.2s; }
+        .btn-submit { background-color: #003366; color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; transition: background 0.2s; margin-bottom: 10px; }
         .btn-submit:hover { background-color: #001f4d; }
+        
+        /* 📱 YENİ EKLENEN KULLANICI GİRİŞ BUTONU STİLİ */
+        .btn-user { background-color: #ff9f43; color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; text-decoration: none; display: block; box-sizing: border-box; transition: background 0.2s; }
+        .btn-user:hover { background-color: #ee5253; }
+        
         .error-msg { color: #dc3545; font-weight: bold; font-size: 14px; margin-top: 10px; }
         .info-tag { font-size: 12px; color: #888; margin-top: 20px; line-height: 1.4; }
     </style>
@@ -24,15 +29,17 @@
         
         <form method="POST" action="/admin-panel">
             <input type="password" name="sifre" placeholder="Admin Yetki Şifresi" required autofocus>
-            <button type="submit" class="btn-submit">Yetkileri Aç</button>
+            <button type="submit" class="btn-submit">Yetkileri Aç (Admin)</button>
         </form>
+
+        <a href="/" class="btn-user">Kullanıcı Girişi (Sadece Takip)</a>
 
         {% if hata %}
             <div class="error-msg">❌ {{ hata }}</div>
         {% endif %}
 
         <div class="info-tag">
-            * Sadece Excel yükleme ve sistemi sıfırlama yetkilerini açmak için şef şifresini giriniz.
+            * Excel yüklemek ve sistemi sıfırlama yetkisini açmak için şifre girin. Sadece uçuşları izlemek ve uçak başı onay vermek için turuncu butona basın.
         </div>
     </div>
 
