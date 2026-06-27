@@ -2,237 +2,40 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Çukurova Havalimanı Operasyon Paneli</title>
+    <title>Çukurova Havalimanı Giriş Paneli</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }
-        .header-bar { background-color: #003366; color: white; padding: 15px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .container { display: flex; gap: 20px; }
-        .sidebar { width: 25%; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .main-content { width: 75%; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        
-        .pers-mavi { background-color: #007bff !important; color: white; }
-        .pers-kirmizi { background-color: #dc3545 !important; color: white; }
-        .pers-yesil { background-color: #28a745 !important; color: white; }
-        .pers-sari { background-color: #ffc107 !important; color: #333; }
-        .pers-turkuaz { background-color: #17a2b8 !important; color: white; }
-        .pers-mor { background-color: #6f42c1 !important; color: white; }
-        
-        .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; display: inline-block; }
-        
-        .gece-ucus { background-color: #e8effa !important; border-left: 5px solid #003366; }
-        .revize-satir { background-color: #fceade !important; border-left: 5px solid #e63946 !important; }
-        .tamamlandi-satir { opacity: 0.30; background-color: #e9ecef !important; border-left: none !important; }
-        
-        .flight-arrival { color: #0040ff; font-weight: bold; font-size: 16px; }
-        .flight-departure { color: #e6b800; font-weight: bold; font-size: 16px; text-shadow: 0.3px 0.3px #555; }
-        
-        .fr24-btn { background-color: #003366; color: #ffcc00; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 12px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
-        .fr24-btn:hover { background-color: #001f4d; color: #fff; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #ddd; vertical-align: middle; }
-        th { background-color: #003366; color: white; }
-        .btn { background: #0056b3; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        input, select { width: 100%; padding: 6px; margin: 4px 0; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
-        
-        .stats-grid { display: flex; gap: 10px; margin-bottom: 20px; }
-        .stat-card { background: #e6f0fa; border-top: 4px solid #003366; padding: 10px; border-radius: 4px; flex: 1; text-align: center; }
-        
-        .sync-btn { background-color: #ff9f43; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; }
-        .sync-active { background-color: #28a745; position: relative; }
-        .sync-active::after { content: "●"; color: #fff; margin-left: 5px; animation: blink 1s infinite; }
-        @keyframes blink { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
-        
-        .perf-table { width: 100%; margin-top: 10px; font-size: 14px; border-collapse: collapse; }
-        .perf-table td { padding: 8px; border-bottom: 1px solid #eee; }
-        .perf-count { font-weight: bold; background-color: #003366; color: white; padding: 2px 8px; border-radius: 10px; float: right; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #001f4d; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-card { background: white; color: #333; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 350px; text-align: center; border-top: 6px solid #ffcc00; }
+        h2 { color: #003366; margin-bottom: 5px; font-size: 22px; }
+        h3 { color: #555; margin-top: 0; font-size: 14px; margin-bottom: 25px; }
+        input[type="password"] { width: 100%; padding: 12px; margin: 15px 0; border: 2px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; text-align: center; }
+        input[type="password"]:focus { border-color: #003366; outline: none; }
+        .btn-submit { background-color: #003366; color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; transition: background 0.2s; }
+        .btn-submit:hover { background-color: #001f4d; }
+        .error-msg { color: #dc3545; font-weight: bold; font-size: 14px; margin-top: 10px; }
+        .info-tag { font-size: 12px; color: #888; margin-top: 20px; line-height: 1.4; }
     </style>
 </head>
 <body>
 
-    <div class="header-bar">
-        <h2>✈️ Çukurova Uluslararası Havalimanı Meydan Operasyon Paneli</h2>
-        <div style="display: flex; align-items: center; gap: 15px;">
-            <button id="syncToggle" class="sync-btn" onclick="toggleSync()">🔄 Anlık Yenileme: KAPALI</button>
-        </div>
-    </div>
-
-    <div style="background: #e6f0fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
-        <strong style="color: #003366;">⏱️ Gece Nöbeti / Odak Zaman Aralığı Seçimi:</strong>
-        <form id="timeForm" method="GET" action="/" style="display: flex; align-items: center; gap: 8px; margin: 0;">
-            <select name="bas_s" id="bas_s" onchange="saveTimeSettings()">{% for h in range(24) %}<option value="{{ h }}" {% if bas_s == h %}selected{% endif %}>{{ "%02d"|format(h) }}</option>{% endfor %}</select>:
-            <select name="bas_d" id="bas_d" onchange="saveTimeSettings()">{% for m in range(0, 60, 5) %}<option value="{{ m }}" {% if bas_d == m %}selected{% endif %}>{{ "%02d"|format(m) }}</option>{% endfor %}</select>
-            <span>-</span>
-            <select name="bit_s" id="bit_s" onchange="saveTimeSettings()">{% for h in range(24) %}<option value="{{ h }}" {% if bit_s == h %}selected{% endif %}>{{ "%02d"|format(h) }}</option>{% endfor %}</select>:
-            <select name="bit_d" id="bit_d" onchange="saveTimeSettings()">{% for m in range(0, 60, 5) %}<option value="{{ m }}" {% if bit_d == m %}selected{% endif %}>{{ "%02d"|format(m) }}</option>{% endfor %}</select>
-            <button type="submit" class="btn" style="padding: 5px 10px;">Uygula</button>
+    <div class="login-card">
+        <h2>✈️ Çukurova International</h2>
+        <h3>Meydan Operasyon Yönetim Paneli</h3>
+        
+        <form method="POST" action="/login">
+            <input type="password" name="sifre" placeholder="Sistem Erişim Şifresi" required autofocus>
+            <button type="submit" class="btn-submit">Sisteme Giriş Yap</button>
         </form>
-    </div>
 
-    <div class="container">
-        <div class="sidebar">
-            <h3>📊 Dosya Yükleme</h3>
-            <form action="/excel-yukle" method="POST" enctype="multipart/form-data">
-                <input type="file" name="excel_file" accept=".xlsx, .xls, .csv" required>
-                <button type="submit" class="btn" style="width:100%; margin-top:5px;">Excel Yükle / Güncelle</button>
-            </form>
+        {% if hata %}
+            <div class="error-msg">❌ {{ hata }}</div>
+        {% endif %}
 
-            <form action="/sistemi-sifirla" method="POST" style="margin-top: 20px;" onsubmit="return confirm('DİKKAT: Mevcut tüm uçuş programı temizlenecek! Emin misiniz?');">
-                <button type="submit" style="width: 100%; background-color: #dc3545; color: white; border: none; padding: 10px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">🚨 Listeyi Temizle</button>
-            </form>
-
-            <h3 style="margin-top: 30px;">📋 Aktif Personel Listesi</h3>
-            <div style="display: flex; flex-direction: column; gap: 6px;">
-                <div style="padding: 8px; border-radius: 4px; font-weight: bold; font-size: 14px;" class="pers-mavi">• ŞAHİN</div>
-                <div style="padding: 8px; border-radius: 4px; font-weight: bold; font-size: 14px;" class="pers-kirmizi">• SENCER</div>
-                <div style="padding: 8px; border-radius: 4px; font-weight: bold; font-size: 14px;" class="pers-yesil">• SERHAT</div>
-                <div style="padding: 8px; border-radius: 4px; font-weight: bold; font-size: 14px;" class="pers-sari">• MELİH</div>
-                <div style="padding: 8px; border-radius: 4px; font-weight: bold; font-size: 14px;" class="pers-turkuaz">• TAHA</div>
-                <div style="padding: 10px; border-radius: 4px; font-weight: bold; font-size: 14px;" class="pers-mor">• ZEYNEP</div>
-            </div>
-
-            <h3 style="margin-top: 30px; border-top: 2px solid #003366; padding-top: 15px;">🔥 Günlük Performans</h3>
-            <table class="perf-table">
-                <tbody>
-                    <tr><td><strong>ŞAHİN</strong> <span class="perf-count">{{ perf['ŞAHİN'] }}</span></td></tr>
-                    <tr><td><strong>SENCER</strong> <span class="perf-count">{{ perf['SENCER'] }}</span></td></tr>
-                    <tr><td><strong>SERHAT</strong> <span class="perf-count">{{ perf['SERHAT'] }}</span></td></tr>
-                    <tr><td><strong>MELİH</strong> <span class="perf-count">{{ perf['MELİH'] }}</span></td></tr>
-                    <tr><td><strong>TAHA</strong> <span class="perf-count">{{ perf['TAHA'] }}</span></td></tr>
-                    <tr><td><strong>ZEYNEP</strong> <span class="perf-count">{{ perf['ZEYNEP'] }}</span></td></tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="main-content">
-            <div class="stats-grid">
-                <div class="stat-card"><h5>Toplam Hareket</h5><p style="font-size:20px; font-weight:bold; margin:0; color:#003366;">{{ toplam_ucus }}</p></div>
-                <div class="stat-card" style="border-top-color: #1d3557;"><h5>Nöbetteki / Odaktaki</h5><p style="font-size:20px; font-weight:bold; margin:0; color:#1d3557;">{{ gece_ucus }}</p></div>
-                <div class="stat-card" style="border-top-color: #28a745;"><h5>Tamamlanan</h5><p style="font-size:20px; font-weight:bold; margin:0; color:#28a745;">{{ tamamlanan_ucus }}</p></div>
-            </div>
-
-            <h3>📅 Nöbet Saatlerine Göre Sıralı Uçuş Programı</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 32%;">Uçuş (Havayolu + Sefer No)</th>
-                        <th style="width: 14%;">Saat (STA/STD)</th>
-                        <th style="width: 14%;">Kapı (Park)</th>
-                        <th style="width: 12%;">Meydan</th>
-                        <th style="width: 13%;">Radar</th>
-                        <th style="width: 15%;">İşlem / Atanan</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for ucus in ucuslar %}
-                    <tr class="{% if ucus.revize_mi == 1 %}revize-satir{% elif ucus.gece_mi == 1 %}gece-ucus{% endif %} {% if ucus.tamamlandi == 1 %}tamamlandi-satir{% endif %}">
-                        <td>
-                            {% if ucus.tip == 'arrival' %}
-                            <span class="flight-arrival">🛬 {{ ucus.havayolu_kod }}{{ ucus.flight_no }}</span>
-                            {% else %}
-                            <span class="flight-departure">🛫 {{ ucus.havayolu_kod }}{{ ucus.flight_no }}</span>
-                            {% endif %}
-                        </td>
-                        <td><span style="font-size: 16px; font-weight: bold;">{{ ucus.saat }}</span></td>
-                        <td>
-                            {% if ucus.park %}
-                            <span style="background: #003366; color: white; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 14px;">{{ ucus.park }}</span>
-                            {% else %}
-                            <span style="color: #bbb; font-style: italic;">Açık Poz.</span>
-                            {% endif %}
-                        </td>
-                        <td><strong style="color: #555;">{{ ucus.meydan }}</strong></td>
-                        <td>
-                            <a href="https://www.flightradar24.com/data/flights/{{ ucus.havayolu_kod }}{{ ucus.flight_no }}" target="_blank" class="fr24-btn">
-                                ✈️ FR24
-                            </a>
-                        </td>
-                        <td>
-                            {% if ucus.tamamlandi == 0 %}
-                            <form action="/ucus-tamamla/{{ ucus.id }}" method="POST" style="display: flex; gap: 3px; margin: 0;">
-                                <select name="personel_ad" required style="width: auto; padding: 2px; font-size: 11px; margin: 0;">
-                                    <option value="">Seç...</option>
-                                    <option value="ŞAHİN">ŞAHİN</option>
-                                    <option value="SENCER">SENCER</option>
-                                    <option value="SERHAT">SERHAT</option>
-                                    <option value="MELİH">MELİH</option>
-                                    <option value="TAHA">TAHA</option>
-                                    <option value="ZEYNEP">ZEYNEP</option>
-                                </select>
-                                <button type="submit" style="background:#28a745; color:white; border:none; padding:4px 8px; border-radius:4px; font-weight:bold; cursor:pointer;">OK</button>
-                            </form>
-                            {% else %}
-                            <form action="/ucus-geri-al/{{ ucus.id }}" method="POST" style="margin: 0; display: flex; align-items: center; gap: 10px;">
-                                <span class="badge {{ ucus.personel_renk }}">✔️ {{ ucus.personel_ad }}</span>
-                                <button type="submit" style="background:#dc3545; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-weight:bold;">Geri Al</button>
-                            </form>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="info-tag">
+            * Yetkinize göre ilgili şifreyi giriniz.<br>
+            (Admin Şifresi veya Personel Şifresi)
         </div>
     </div>
 
-    <script>
-        let syncInterval = null;
-
-        // Sayfa yüklendiğinde hafızadaki saatleri ve yenileme durumunu kontrol et kanka
-        window.onload = function() {
-            // Eğer URL'de parametre yoksa ve hafızada kayıtlı saat varsa otomatik o saatlere yönlendir
-            const urlParams = new URLSearchParams(window.location.search);
-            if (!urlParams.has('bas_s') && localStorage.getItem('bas_s') !== null) {
-                applySavedTime();
-                return;
-            }
-
-            if (localStorage.getItem("autoSync") === "true") { startSync(); }
-        }
-
-        // Seçilen saatleri tarayıcı hafızasına yazan fonksiyon
-        function saveTimeSettings() {
-            localStorage.setItem('bas_s', document.getElementById('bas_s').value);
-            localStorage.setItem('bas_d', document.getElementById('bas_d').value);
-            localStorage.setItem('bit_s', document.getElementById('bit_s').value);
-            localStorage.setItem('bit_d', document.getElementById('bit_d').value);
-        }
-
-        // Hafızadaki saat ayarlarını linke otomatik giydiren fonksiyon
-        function applySavedTime() {
-            const bs = localStorage.getItem('bas_s') || 17;
-            const bd = localStorage.getItem('bas_d') || 0;
-            const bts = localStorage.getItem('bit_s') || 9;
-            const btd = localStorage.getItem('bit_d') || 0;
-            window.location.href = `/?bas_s=${bs}&bas_d=${bd}&bit_s=${bts}&bit_d=${btd}`;
-        }
-
-        function toggleSync() {
-            if (syncInterval) { stopSync(); } else { startSync(); }
-        }
-
-        function startSync() {
-            localStorage.setItem("autoSync", "true");
-            document.getElementById("syncToggle").innerText = "🔄 Anlık Yenileme: AKTİF";
-            document.getElementById("syncToggle").classList.add("sync-active");
-            
-            // Yenilerken mevcut saat kısıtlamalarını koruyarak sayfayı t tazeler kanka
-            syncInterval = setInterval(() => {
-                const bs = document.getElementById('bas_s').value;
-                const bd = document.getElementById('bas_d').value;
-                const bts = document.getElementById('bit_s').value;
-                const btd = document.getElementById('bit_d').value;
-                window.location.href = `/?bas_s=${bs}&bas_d=${bd}&bit_s=${bts}&bit_d=${btd}`;
-            }, 5000); 
-        }
-
-        function stopSync() {
-            localStorage.setItem("autoSync", "false");
-            document.getElementById("syncToggle").innerText = "🔄 Anlık Yenileme: KAPALI";
-            document.getElementById("syncToggle").classList.remove("sync-active");
-            clearInterval(syncInterval);
-            syncInterval = null;
-        }
-    </script>
 </body>
 </html>
