@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Çukurova Havalimanı Giriş Paneli</title>
+    <title>Çukurova Havalimanı Admin Girişi</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #001f4d; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .login-card { background: white; color: #333; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 350px; text-align: center; border-top: 6px solid #ffcc00; }
@@ -19,12 +19,12 @@
 <body>
 
     <div class="login-card">
-        <h2>✈️ Çukurova International</h2>
-        <h3>Meydan Operasyon Yönetim Paneli</h3>
+        <h2>🔒 Admin Giriş Paneli</h2>
+        <h3>Çukurova Meydan Yönetimi</h3>
         
-        <form method="POST" action="/login">
-            <input type="password" name="sifre" placeholder="Sistem Erişim Şifresi" required autofocus>
-            <button type="submit" class="btn-submit">Sisteme Giriş Yap</button>
+        <form method="POST" action="/admin-panel">
+            <input type="password" name="sifre" placeholder="Admin Yetki Şifresi" required autofocus>
+            <button type="submit" class="btn-submit">Yetkileri Aç</button>
         </form>
 
         {% if hata %}
@@ -32,8 +32,7 @@
         {% endif %}
 
         <div class="info-tag">
-            * Yetkinize göre ilgili şifreyi giriniz.<br>
-            (Admin Şifresi veya Personel Şifresi)
+            * Sadece Excel yükleme ve sistemi sıfırlama yetkilerini açmak için şef şifresini giriniz.
         </div>
     </div>
 
