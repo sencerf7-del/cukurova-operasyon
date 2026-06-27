@@ -1,15 +1,20 @@
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, session
 import sqlite3
 import pandas as pd
 import os
 
 app = Flask(__name__)
+app.secret_key = "cukurova_gizli_anahtar_apron" # Oturum güvenliği için şart kanka
 DB_NAME = "havalimanı_operasyon.db"
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 SABIT_EKIP = ["ŞAHİN", "SENCER", "SERHAT", "MELİH", "TAHA", "ZEYNEP"]
 RENK_SIRALAMASI = ["pers-mavi", "pers-kirmizi", "pers-yesil", "pers-sari", "pers-turkuaz", "pers-mor"]
+
+# 🔐 GİRİŞ ŞİFRELERİ (Buradan değiştirebilirsin kanka)
+ADMIN_PASSWORD = "admin123"
+USER_PASSWORD = "cukurova2026"
 
 def veritabanini_kur():
     conn = sqlite3.connect(DB_NAME)
@@ -80,8 +85,33 @@ def istasyon_ayir(ist_str, tip):
             return parcalar[1].strip()
     return val
 
+# 🔑 GİRİŞ SAYFASI ROUTE'U
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        sifre = request.form.get('sifre')
+        if sifre == ADMIN_PASSWORD:
+            session['rol'] = 'admin'
+            return redirect('/')
+        elif sifre == USER_PASSWORD:
+            session['rol'] = 'user'
+            return redirect('/')
+        else:
+            return render_template('login.html', hata="Hatalı Şifre Girdiniz!")
+    return render_template('login.html')
+
+# 🚪 ÇIKIŞ ROUTE'U
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect('/login')
+
 @app.route('/')
 def ana_sayfa():
+    # Giriş yapılmamışsa login sayfasına postala kanka
+    if 'rol' not in session:
+        return redirect('/login')
+        
     bas_s = int(request.args.get('bas_s', 17))
     bas_d = int(request.args.get('bas_d', 0))
     bit_s = int(request.args.get('bit_s', 9))
@@ -158,10 +188,11 @@ def ana_sayfa():
     
     return render_template('index.html', ucuslar=duzenli_liste, personeller=personeller, 
                            toplam_ucus=toplam_ucus, gece_ucus=odak_count, tamamlanan_ucus=tamamlanan,
-                           perf=perf, bas_s=bas_s, bas_d=bas_d, bit_s=bit_s, bit_d=bit_d)
+                           perf=perf, bas_s=bas_s, bas_d=bas_d, bit_s=bit_s, bit_d=bit_d, rol=session.get('rol'))
 
 @app.route('/excel-yukle', methods=['POST'])
 def excel_yukle():
+    if session.get('rol') != 'admin': return "Yetkisiz İşlem", 403
     if 'excel_file' not in request.files: return redirect('/')
     file = request.files['excel_file']
     if file.filename == '': return redirect('/')
@@ -225,6 +256,7 @@ def excel_yukle():
 
 @app.route('/sistemi-sifirla', methods=['POST'])
 def sistemi_sifirla():
+    if session.get('rol') != 'admin': return "Yetkisiz İşlem", 403
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute('DELETE FROM ucuslar')
