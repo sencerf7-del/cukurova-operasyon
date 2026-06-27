@@ -85,7 +85,7 @@ def istasyon_ayir(ist_str, tip):
             return parcalar[1].strip()
     return val
 
-# 🔑 GİRİŞ SAYFASI ROUTE'U
+# 🔑 GİRİŞ SAYFASI
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -100,7 +100,7 @@ def login():
             return render_template('login.html', hata="Hatalı Şifre Girdiniz!")
     return render_template('login.html')
 
-# 🚪 ÇIKIŞ ROUTE'U
+# 🚪 ÇIKIŞ SİSTEMİ
 @app.route('/logout')
 def logout():
     session.clear()
@@ -108,7 +108,6 @@ def logout():
 
 @app.route('/')
 def ana_sayfa():
-    # Giriş yapılmamışsa login sayfasına postala kanka
     if 'rol' not in session:
         return redirect('/login')
         
