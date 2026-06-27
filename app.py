@@ -4,7 +4,8 @@ import pandas as pd
 import os
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "cukurova_gizli_anahtar_apron")
+# 🔑 Render ortamındaki sabit kilidi çekiyoruz kanka, oturumların karışmasını bu engeller
+app.secret_key = os.environ.get("SECRET_KEY", "cukurova_gizli_anahtar_apron_2026_guvenlik")
 DB_NAME = "havalimanı_operasyon.db"
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -84,12 +85,12 @@ def istasyon_ayir(ist_str, tip):
             return parcalar[1].strip()
     return val
 
-# 🚪 ANA SAYFA (ŞİFRESİZ - HERKES GÖREBİLİR KANKA)
+# 🚪 ANA SAYFA (HER CİHAZ KENDİ ROLÜNÜ TUTAR KANKA)
 @app.route('/')
 def ana_sayfa():
-    # Giriş yapmayan herkes otomatik 'user' (kullanıcı) rolündedir kanka
-    if 'rol' not in session:
-        session['rol'] = 'user'
+    # 🎯 KRİTİK DÜZELTME: Eğer bu tarayıcıda daha önce rol tanımlanmadıysa, varsayılan olarak 'user' yap.
+    # Diğer giriş yapanlar artık burayı tetiklediğinde senin admin oturumunu bozamayacak!
+    mevcut_rol = session.get('rol', 'user')
         
     bas_s = int(request.args.get('bas_s', 17))
     bas_d = int(request.args.get('bas_d', 0))
@@ -171,7 +172,7 @@ def ana_sayfa():
     
     return render_template('index.html', ucuslar=duzenli_liste, personeller=personeller, 
                            toplam_ucus=toplam_ucus, gece_ucus=odak_count, tamamlanan_ucus=tamamlanan,
-                           perf=perf, bas_s=bas_s, bas_d=bas_d, bit_s=bit_s, bit_d=bit_d, rol=session.get('rol'))
+                           perf=perf, bas_s=bas_s, bas_d=bas_d, bit_s=bit_s, bit_d=bit_d, rol=mevcut_rol)
 
 # 🔑 GİZLİ ADMİN GİRİŞ SAYFASI ROUTE'U
 @app.route('/admin-panel', methods=['GET', 'POST'])
@@ -179,16 +180,16 @@ def admin_login():
     if request.method == 'POST':
         sifre = request.form.get('sifre')
         if sifre == ADMIN_PASSWORD:
-            session['rol'] = 'admin'
+            session['rol'] = 'admin'  # Sadece şifreyi doğru yazan cihaz admin olur kanka
             return redirect('/')
         else:
             return render_template('login.html', hata="Hatalı Admin Şifresi!")
     return render_template('login.html')
 
-# 🚪 YETKİDEN ÇIKIŞ (NORMAL KULLANICIYA DÖNME)
+# 🚪 YETKİDEN ÇIKIŞ (SADECE ÇIKIŞ YAPANI ETKİLER)
 @app.route('/logout')
 def logout():
-    session.clear()
+    session.pop('rol', None)
     return redirect('/')
 
 @app.route('/excel-yukle', methods=['POST'])
