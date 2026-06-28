@@ -189,13 +189,15 @@
         </div>
     </div>
 
-    <script>
+   <script>
         let syncInterval = null;
 
         function personelSesiniCal(formElement) {
             const selectBox = formElement.querySelector('select[name="personel_ad"]');
             const secilenIsim = selectBox.value;
             if (!secilenIsim) return true;
+            
+            // İsim temizleme işlemi
             let dosyaAdi = secilenIsim.toLowerCase()
                 .replace(/ş/g, 's')
                 .replace(/ı/g, 'i')
@@ -203,9 +205,17 @@
                 .replace(/ğ/g, 'g')
                 .replace(/ü/g, 'u')
                 .replace(/ö/g, 'o');
-            let ses = new Audio(`/static/sounds/${dosyaAdi}.mp3`);
+
+            // ?v= + new Date().getTime() ekleyerek tarayıcıyı dosyayı yeniden çekmeye zorluyoruz
+            let ses = new Audio(`/static/sounds/${dosyaAdi}.mp3?v=` + new Date().getTime());
+            
             ses.play().catch(e => console.log("Ses oynatılamadı:", e));
-            setTimeout(() => { formElement.submit(); }, 1500);
+
+            // Formu 1.5 saniye geciktirerek sesin çalmasına izin veriyoruz
+            setTimeout(() => {
+                formElement.submit();
+            }, 1500);
+
             return false; 
         }
 
