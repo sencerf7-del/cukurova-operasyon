@@ -161,7 +161,7 @@
                         </td>
                         <td>
                             {% if ucus.tamamlandi == 0 %}
-                            <form action="/ucus-tamamla/{{ ucus.id }}" method="POST" style="display: flex; gap: 3px; margin: 0;">
+                            <form action="/ucus-tamamla/{{ ucus.id }}" method="POST" style="display: flex; gap: 3px; margin: 0;" onsubmit="return personelSesiniCal(this);">
                                 <select name="personel_ad" required style="width: auto; padding: 2px; font-size: 11px; margin: 0;">
                                     <option value="">Seç...</option>
                                     <option value="ŞAHİN">ŞAHİN</option>
@@ -191,6 +191,23 @@
 
     <script>
         let syncInterval = null;
+
+        function personelSesiniCal(formElement) {
+            const selectBox = formElement.querySelector('select[name="personel_ad"]');
+            const secilenIsim = selectBox.value;
+            if (!secilenIsim) return true;
+            let dosyaAdi = secilenIsim.toLowerCase()
+                .replace(/ş/g, 's')
+                .replace(/ı/g, 'i')
+                .replace(/ç/g, 'c')
+                .replace(/ğ/g, 'g')
+                .replace(/ü/g, 'u')
+                .replace(/ö/g, 'o');
+            let ses = new Audio(`/static/sounds/${dosyaAdi}.mp3`);
+            ses.play().catch(e => console.log("Ses oynatılamadı:", e));
+            setTimeout(() => { formElement.submit(); }, 1500);
+            return false; 
+        }
 
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -225,7 +242,6 @@
             localStorage.setItem("autoSync", "true");
             document.getElementById("syncToggle").innerText = "🔄 Anlık Yenileme: AKTİF";
             document.getElementById("syncToggle").classList.add("sync-active");
-            
             syncInterval = setInterval(() => {
                 const bas_element = document.getElementById('bas_s');
                 if (bas_element) {
